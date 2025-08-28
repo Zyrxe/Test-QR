@@ -3,22 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulator Dompet Digital QRIS</title>
+    <title>Simulator Dompet Digital</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .view { display: none; }
-        .view.active { display: block; }
+        .view.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .pin-dot { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid #9ca3af; transition: background-color 0.2s; }
         .pin-dot.filled { background-color: #3b82f6; border-color: #3b82f6; }
         .keypad-btn { transition: background-color 0.1s; }
         .keypad-btn:active { background-color: #d1d5db; }
-        #toast { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); transition: bottom 0.5s ease-in-out; }
+        #toast { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); transition: bottom 0.5s ease-in-out; z-index: 50; }
         #toast.show { bottom: 20px; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -31,164 +33,92 @@
             
             <!-- Home View -->
             <div id="home-view" class="view active space-y-6">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-sm text-gray-500">Selamat Datang,</p>
-                        <p id="home-sender-name" class="text-xl font-bold text-gray-900">Maechell</p>
-                    </div>
-                    <button id="reset-data-button" class="text-xs text-gray-400 hover:text-red-500">Reset Data</button>
-                </div>
-                <div class="bg-blue-600 text-white p-5 rounded-xl shadow-lg">
-                    <p class="text-sm opacity-80">Saldo Anda</p>
-                    <p id="home-balance" class="text-3xl font-bold mt-1">Rp 0</p>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <button id="pay-button" class="bg-gray-100 p-4 rounded-lg text-center hover:bg-gray-200">
-                        <svg class="w-8 h-8 mx-auto text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        <p class="mt-2 font-semibold text-sm">Bayar QRIS</p>
-                    </button>
-                    <button id="history-button" class="bg-gray-100 p-4 rounded-lg text-center hover:bg-gray-200">
-                        <svg class="w-8 h-8 mx-auto text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                        <p class="mt-2 font-semibold text-sm">Riwayat</p>
-                    </button>
+                <div class="flex justify-between items-center"><p id="home-sender-name" class="text-xl font-bold">Maechell</p><button id="reset-data-button" class="text-xs text-gray-400 hover:text-red-500">Reset</button></div>
+                <div class="bg-blue-600 text-white p-5 rounded-xl shadow-lg"><p class="text-sm opacity-80">Saldo Anda</p><p id="home-balance" class="text-3xl font-bold mt-1"></p></div>
+                <div class="grid grid-cols-4 gap-4 text-center">
+                    <button id="pay-button" class="hover:bg-gray-100 p-2 rounded-lg"><div class="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></div><p class="mt-2 text-xs font-semibold">Bayar</p></button>
+                    <button id="transfer-button" class="hover:bg-gray-100 p-2 rounded-lg"><div class="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5l-3-3m0 0l-3 3m3-3v8"/></svg></div><p class="mt-2 text-xs font-semibold">Transfer</p></button>
+                    <button id="receive-button" class="hover:bg-gray-100 p-2 rounded-lg"><div class="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div><p class="mt-2 text-xs font-semibold">Terima</p></button>
+                    <button id="history-button" class="hover:bg-gray-100 p-2 rounded-lg"><div class="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><p class="mt-2 text-xs font-semibold">Riwayat</p></button>
                 </div>
             </div>
 
             <!-- Scanner View -->
-            <div id="scanner-view" class="view">
-                <div class="text-center">
-                    <h1 class="text-2xl font-bold">Pindai QRIS</h1>
-                    <p class="text-gray-500 mt-1">Arahkan kamera ke kode QR</p>
+            <div id="scanner-view" class="view"><h1 class="text-2xl font-bold text-center">Pindai QRIS</h1><div id="qr-reader" class="w-full mt-4 rounded-lg overflow-hidden border"></div><button class="back-button w-full mt-4 bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button></div>
+            
+            <!-- Transfer View -->
+            <div id="transfer-view" class="view space-y-4">
+                <h2 class="text-xl font-semibold text-center">Transfer Bank</h2>
+                <div>
+                    <label class="text-sm font-medium">Bank Tujuan</label>
+                    <select id="bank-select" class="w-full mt-1 px-3 py-2 border rounded-md bg-white"></select>
                 </div>
-                <div id="qr-reader" class="w-full mt-4 rounded-lg overflow-hidden"></div>
-                <div class="text-center text-gray-500 my-4">atau</div>
-                <label for="qr-file-input" class="w-full flex items-center justify-center px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    <span>Upload dari Galeri</span>
-                </label>
-                <input type="file" id="qr-file-input" accept="image/*" class="hidden">
-                <button class="back-button w-full mt-4 bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300" data-target="home-view">Kembali</button>
+                <div>
+                    <label class="text-sm font-medium">Nomor Rekening</label>
+                    <input type="number" id="account-number" class="w-full mt-1 px-3 py-2 border rounded-md" placeholder="Masukkan nomor rekening">
+                    <p class="text-xs text-gray-400 mt-1">Untuk tes, coba: <strong>1234567890</strong> (BCA) atau <strong>1112223334</strong> (Mandiri).</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">Nominal (Rp)</label>
+                    <input type="number" id="transfer-amount" class="w-full mt-1 px-3 py-2 border rounded-md">
+                </div>
+                <button id="check-account-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Lanjutkan</button>
+                <button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button>
             </div>
 
-            <!-- Payment Details View -->
-            <div id="payment-view" class="view space-y-4">
-                <h2 class="text-xl font-semibold text-center">Detail Pembayaran</h2>
-                <div id="merchant-details" class="bg-gray-50 rounded-lg p-4"></div>
-                <div>
-                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
-                    <input type="number" id="amount" class="w-full px-3 py-2 border rounded-md" placeholder="0">
-                </div>
-                <div>
-                    <label for="purpose" class="block text-sm font-medium text-gray-700 mb-1">Catatan (Opsional)</label>
-                    <input type="text" id="purpose" class="w-full px-3 py-2 border rounded-md" placeholder="Contoh: Kopi Susu">
-                </div>
-                <button id="confirm-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Lanjutkan</button>
-                <button class="back-button w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-lg" data-target="scanner-view">Kembali</button>
-            </div>
+            <!-- Receive Money View -->
+            <div id="receive-view" class="view space-y-4"><h2 class="text-xl font-semibold text-center">Terima Uang</h2><div><label class="text-sm font-medium">Nominal (Opsional)</label><input type="number" id="receive-amount" class="w-full mt-1 px-3 py-2 border rounded-md" placeholder="Kosongkan untuk jumlah bebas"></div><button id="generate-qr-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Buat Kode QR</button><button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button></div>
+            
+            <!-- Show QR View -->
+            <div id="show-qr-view" class="view text-center"><h2 class="text-xl font-semibold">Pindai untuk Membayar</h2><div id="qrcode" class="flex justify-center my-4"></div><p class="font-semibold" id="qr-receiver-name"></p><p class="text-2xl font-bold" id="qr-receive-amount"></p><button id="simulate-receive-button" class="w-full mt-4 bg-green-500 text-white font-bold py-3 rounded-lg">Simulasikan Penerimaan Dana</button><button class="back-button w-full mt-2 bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Selesai</button></div>
+
+            <!-- Payment/Transfer Confirmation View -->
+            <div id="confirmation-view" class="view space-y-4"><h2 class="text-xl font-semibold text-center">Konfirmasi Transaksi</h2><div id="confirmation-details" class="bg-gray-50 rounded-lg p-4"></div><button id="confirm-pay-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Konfirmasi</button><button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Batal</button></div>
 
             <!-- PIN View -->
-            <div id="pin-view" class="view">
-                <h2 class="text-xl font-semibold text-center">Masukkan PIN</h2>
-                <div class="flex justify-center gap-4 my-6">
-                    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
-                    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
-                </div>
-                <div class="grid grid-cols-3 gap-4 text-2xl">
-                    <button class="keypad-btn p-4 rounded-lg">1</button>
-                    <button class="keypad-btn p-4 rounded-lg">2</button>
-                    <button class="keypad-btn p-4 rounded-lg">3</button>
-                    <button class="keypad-btn p-4 rounded-lg">4</button>
-                    <button class="keypad-btn p-4 rounded-lg">5</button>
-                    <button class="keypad-btn p-4 rounded-lg">6</button>
-                    <button class="keypad-btn p-4 rounded-lg">7</button>
-                    <button class="keypad-btn p-4 rounded-lg">8</button>
-                    <button class="keypad-btn p-4 rounded-lg">9</button>
-                    <div class="text-center"></div>
-                    <button class="keypad-btn p-4 rounded-lg">0</button>
-                    <button id="pin-backspace" class="p-4 rounded-lg flex justify-center items-center"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 002.828 0L21 12M3 12l6.414-6.414a2 2 0 012.828 0L21 12"></path></svg></button>
-                </div>
-                 <button class="back-button w-full mt-4 bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300" data-target="payment-view">Kembali</button>
-            </div>
+            <div id="pin-view" class="view"><h2 class="text-xl font-semibold text-center">Masukkan PIN</h2><div class="flex justify-center gap-4 my-6" id="pin-dots"></div><div class="grid grid-cols-3 gap-4 text-2xl" id="keypad"></div><button class="back-button w-full mt-4 bg-gray-200 font-bold py-3 rounded-lg" data-target="confirmation-view">Kembali</button></div>
 
             <!-- Success View -->
-            <div id="success-view" class="view text-center py-4">
-                <div class="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
-                    <svg class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <h2 class="text-2xl font-bold mt-4">Transaksi Berhasil</h2>
-                <div id="receipt" class="mt-4 text-left bg-white rounded-lg p-4 border"></div>
-                <div class="flex gap-4 mt-6">
-                    <button id="download-receipt" class="w-full bg-gray-700 text-white font-bold py-3 rounded-lg">Download</button>
-                    <button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Selesai</button>
-                </div>
-            </div>
+            <div id="success-view" class="view text-center py-4"><div class="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center"><svg class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg></div><h2 class="text-2xl font-bold mt-4">Transaksi Berhasil</h2><div id="receipt" class="mt-4 text-left bg-white rounded-lg p-4 border"></div><div class="flex gap-4 mt-6"><button id="download-receipt" class="w-full bg-gray-700 text-white font-bold py-3 rounded-lg">Download</button><button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Selesai</button></div></div>
 
             <!-- History View -->
-            <div id="history-view" class="view">
-                <h2 class="text-xl font-semibold text-center mb-4">Riwayat Transaksi</h2>
-                <div id="history-list" class="space-y-3 max-h-96 overflow-y-auto"></div>
-                <button class="back-button w-full mt-4 bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button>
-            </div>
-
-            <!-- Loading View -->
-            <div id="loading-view" class="view hidden flex-col items-center justify-center space-y-4 py-8">
-                <div class="loader"></div><p class="text-gray-600">Memproses...</p>
-            </div>
+            <div id="history-view" class="view"><h2 class="text-xl font-semibold text-center mb-4">Riwayat Transaksi</h2><div id="history-list" class="space-y-3 max-h-96 overflow-y-auto"></div><button class="back-button w-full mt-4 bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button></div>
             
-            <!-- Error Message -->
+            <!-- Loading View -->
+            <div id="loading-view" class="view flex-col items-center justify-center space-y-4 py-8"><div class="loader"></div><p id="loading-text" class="text-gray-600">Memproses...</p></div>
+            
             <div id="error-message" class="hidden text-center p-3 my-2 bg-red-100 text-red-700 rounded-lg"></div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
     <div id="toast" class="bg-gray-800 text-white text-sm py-2 px-4 rounded-full shadow-lg"></div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- STATE MANAGEMENT ---
-        let appState = {
-            balance: 0,
-            transactions: [],
-            senderName: 'Maechell',
-        };
-
-        let transactionData = {};
-        let html5QrcodeScanner;
-        let currentPin = '';
-
-        const views = {
-            home: document.getElementById('home-view'),
-            scanner: document.getElementById('scanner-view'),
-            payment: document.getElementById('payment-view'),
-            pin: document.getElementById('pin-view'),
-            success: document.getElementById('success-view'),
-            history: document.getElementById('history-view'),
-            loading: document.getElementById('loading-view'),
-        };
-
+        let appState = {}; let transactionData = {}; let html5QrcodeScanner; let currentPin = '';
+        const views = Object.fromEntries([...document.querySelectorAll('.view')].map(el => [el.id.replace('-view', ''), el]));
         const formatCurrency = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+        const banks = ["BCA", "Mandiri", "BNI", "BRI", "CIMB Niaga", "Danamon"];
+        
+        const bankAccountDatabase = {
+            "BCA": { "1234567890": "Budi Santoso", "0987654321": "Siti Aminah" },
+            "Mandiri": { "1112223334": "Citra Lestari", "4445556667": "Rizky Pratama" },
+            "BNI": { "9876543210": "Agus Wijaya", "0123456789": "Fitri Handayani" },
+            "BRI": { "5555666677": "Eko Prasetyo" }
+        };
 
-        function saveState() {
-            localStorage.setItem('appState', JSON.stringify(appState));
-        }
-
+        function saveState() { localStorage.setItem('walletAppState', JSON.stringify(appState)); }
         function loadState() {
-            const savedState = localStorage.getItem('appState');
-            if (savedState) {
-                appState = JSON.parse(savedState);
-            } else {
-                // Default state for first-time users
-                appState.balance = 5000000;
-                appState.transactions = [];
-                saveState();
-            }
+            const saved = localStorage.getItem('walletAppState');
+            appState = saved ? JSON.parse(saved) : { balance: 5000000, transactions: [], senderName: 'Maechell' };
         }
         
-        // --- VIEW & UI LOGIC ---
-        function showView(viewName) {
+        function showView(viewName, data) {
             Object.values(views).forEach(v => v.classList.remove('active'));
             views[viewName].classList.add('active');
             document.getElementById('error-message').classList.add('hidden');
+            if (viewName === 'scanner') startScanner(); else stopScanner();
+            if (data) transactionData = { ...transactionData, ...data };
         }
 
         function updateHomeScreen() {
@@ -198,201 +128,178 @@
         
         function renderHistory() {
             const list = document.getElementById('history-list');
-            list.innerHTML = '';
-            if (appState.transactions.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-500">Belum ada transaksi.</p>';
-                return;
-            }
+            list.innerHTML = appState.transactions.length === 0 ? '<p class="text-center text-gray-500">Belum ada transaksi.</p>' : '';
             appState.transactions.slice().reverse().forEach(tx => {
+                const isIncoming = tx.type === 'Dana Masuk';
                 const item = document.createElement('div');
                 item.className = 'p-3 border rounded-lg flex justify-between items-center';
                 item.innerHTML = `
-                    <div>
-                        <p class="font-semibold">${tx.merchant.name}</p>
-                        <p class="text-xs text-gray-500">${tx.timestamp}</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isIncoming ? 'bg-green-100' : 'bg-red-100'}">
+                            <svg class="w-6 h-6 ${isIncoming ? 'text-green-600' : 'text-red-600'}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isIncoming ? 'M12 4v16m8-8H4' : 'M12 4v16m-8-8h16'}"/></svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold">${isIncoming ? tx.sender.name : tx.merchant.name}</p>
+                            <p class="text-xs text-gray-500">${tx.timestamp}</p>
+                        </div>
                     </div>
-                    <p class="font-bold text-red-600">-${formatCurrency(tx.payment.total)}</p>
+                    <p class="font-bold ${isIncoming ? 'text-green-600' : 'text-red-600'}">${isIncoming ? '+' : '-'}${formatCurrency(tx.payment.total)}</p>
                 `;
                 list.appendChild(item);
             });
         }
-
-        function updatePinDots() {
-            const dots = document.querySelectorAll('#pin-view .pin-dot');
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('filled', index < currentPin.length);
-            });
-        }
-
-        function showError(msg) {
-            const errorEl = document.getElementById('error-message');
-            errorEl.textContent = msg;
-            errorEl.classList.remove('hidden');
-        }
         
-        function showToast(msg) {
-            const toastEl = document.getElementById('toast');
-            toastEl.textContent = msg;
-            toastEl.classList.add('show');
-            setTimeout(() => toastEl.classList.remove('show'), 3000);
-        }
-
-        // --- QR SCANNER LOGIC ---
         function startScanner() {
-            if (!html5QrcodeScanner || html5QrcodeScanner.getState() === 1) { // 1 is NOT_STARTED
-                html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+            const qrReaderEl = document.getElementById('qr-reader');
+            if (!qrReaderEl.hasChildNodes()) {
+                html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true }, false);
                 html5QrcodeScanner.render(onScanSuccess, () => {});
+            }
+        }
+        function stopScanner() {
+            if (html5QrcodeScanner && html5QrcodeScanner.getState() === 2) {
+                html5QrcodeScanner.clear().catch(err => {});
             }
         }
 
         function onScanSuccess(decodedText) {
-            html5QrcodeScanner.clear().catch(err => console.error(err));
-            showView('loading');
+            stopScanner(); showView('loading');
+            document.getElementById('loading-text').textContent = "Memproses QRIS...";
             setTimeout(() => {
                 try {
-                    const data = JSON.parse(atob(decodedText.substring(5))); // Dummy parsing
-                    transactionData.merchant = { name: data.merchantName, city: data.city, nmid: data.nmid };
-                    document.getElementById('merchant-details').innerHTML = `
-                        <div class="flex justify-between p-2"><span class="text-gray-500">Penerima</span><span class="font-semibold">${transactionData.merchant.name}</span></div>
-                        <div class="flex justify-between p-2"><span class="text-gray-500">Lokasi</span><span class="font-semibold">${transactionData.merchant.city}</span></div>
-                    `;
-                    showView('payment');
-                } catch (e) {
-                    showError('Kode QR tidak valid.');
-                    resetToHome();
-                }
+                    const data = parseTLV(decodedText);
+                    const merchantInfo = data['26'] || data['27'] || data['28'] || data['29'] || data['30'] || data['31'] || data['32'] || data['33'] || data['34'] || data['35'] || data['36'] || data['37'] || data['38'] || data['39'] || data['40'] || data['41'] || data['42'] || data['43'] || data['44'] || data['45'] || data['46'] || data['47'] || data['48'] || data['49'] || data['50'] || data['51'];
+                    if (!data['59'] || !merchantInfo || !merchantInfo['02']) throw new Error("Format QRIS tidak valid.");
+                    showView('payment', { type: 'QRIS', merchant: { name: data['59'], city: data['60'] || 'N/A', nmid: merchantInfo['02'] } });
+                    document.getElementById('merchant-details').innerHTML = `<div class="flex justify-between p-2"><span class="text-gray-500">Penerima</span><span class="font-semibold">${transactionData.merchant.name}</span></div>`;
+                } catch (e) { showError(e.message); resetToHome(); }
             }, 500);
         }
         
-        // --- FLOW & EVENT HANDLERS ---
         function resetToHome() {
-            transactionData = {};
-            currentPin = '';
-            document.getElementById('amount').value = '';
-            document.getElementById('purpose').value = '';
-            updateHomeScreen();
-            showView('home');
+            stopScanner(); transactionData = {}; currentPin = '';
+            ['amount', 'purpose', 'transfer-amount', 'account-number', 'receive-amount'].forEach(id => document.getElementById(id).value = '');
+            updateHomeScreen(); showView('home');
         }
 
-        document.getElementById('pay-button').addEventListener('click', () => {
-            showView('scanner');
-            startScanner();
-        });
-
-        document.getElementById('history-button').addEventListener('click', () => {
-            renderHistory();
-            showView('history');
-        });
-
-        document.querySelectorAll('.back-button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetView = btn.dataset.target;
-                if (targetView === 'scanner-view') {
-                    if (html5QrcodeScanner) html5QrcodeScanner.clear().catch(err => console.error(err));
-                    startScanner();
-                }
-                if (targetView === 'home-view') {
-                    resetToHome();
-                } else {
-                    showView(targetView);
-                }
-            });
-        });
-        
-        document.getElementById('confirm-button').addEventListener('click', () => {
-            const amount = parseFloat(document.getElementById('amount').value);
-            if (isNaN(amount) || amount <= 0) {
-                showError("Masukkan nominal yang valid.");
-                return;
-            }
-            
-            const total = amount + 2500;
-            if (total > appState.balance) {
-                showError(`Saldo tidak mencukupi. Saldo Anda: ${formatCurrency(appState.balance)}`);
-                return;
-            }
-            
-            transactionData.payment = {
-                amount: amount,
-                adminFee: 2500,
-                total: total,
-                purpose: document.getElementById('purpose').value || 'Lainnya',
-            };
-            
-            currentPin = '';
-            updatePinDots();
-            showView('pin');
-        });
-        
-        document.querySelector('#pin-view .grid').addEventListener('click', e => {
-            if (e.target.tagName !== 'BUTTON') return;
-            
-            if (e.target.id === 'pin-backspace') {
-                currentPin = currentPin.slice(0, -1);
-            } else if (currentPin.length < 6) {
-                currentPin += e.target.textContent;
-            }
-            
-            updatePinDots();
-
-            if (currentPin.length === 6) {
-                finalizeTransaction();
-            }
-        });
+        function showConfirmation() {
+            const detailsEl = document.getElementById('confirmation-details');
+            const { type, payment, merchant } = transactionData;
+            const total = payment.amount + payment.adminFee;
+            if (total > appState.balance) { showError(`Saldo tidak mencukupi.`); return; }
+            payment.total = total;
+            detailsEl.innerHTML = `
+                <div class="flex justify-between p-1"><span class="text-gray-500">Penerima</span><span class="font-semibold">${merchant.name}</span></div>
+                ${type === 'Transfer' ? `<div class="flex justify-between p-1"><span class="text-gray-500">Bank Tujuan</span><span class="font-semibold">${merchant.bank} - ${merchant.account}</span></div>` : ''}
+                <hr class="my-2"><div class="flex justify-between p-1"><span>Nominal</span><span>${formatCurrency(payment.amount)}</span></div>
+                <div class="flex justify-between p-1"><span>Biaya Admin</span><span>${formatCurrency(payment.adminFee)}</span></div>
+                <div class="flex justify-between p-2 mt-2 border-t-2"><span class="font-bold">Total</span><span class="font-bold text-xl text-blue-600">${formatCurrency(payment.total)}</span></div>
+            `;
+            showView('confirmation');
+        }
 
         function finalizeTransaction() {
             showView('loading');
+            document.getElementById('loading-text').textContent = "Memproses Transaksi...";
             setTimeout(() => {
-                // Update state
                 appState.balance -= transactionData.payment.total;
                 transactionData.refId = `TRX${Date.now()}`;
                 transactionData.timestamp = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
                 appState.transactions.push(transactionData);
                 saveState();
-
-                // Generate receipt
-                const receiptEl = document.getElementById('receipt');
-                receiptEl.innerHTML = `
+                document.getElementById('receipt').innerHTML = `
                     <h3 class="text-center font-semibold text-lg mb-2">Bukti Transaksi</h3>
                     <div class="flex justify-between p-1"><span class="text-gray-500">Status</span><span class="font-bold text-green-600">Berhasil</span></div>
                     <div class="flex justify-between p-1"><span class="text-gray-500">No. Ref</span><span class="font-mono text-xs">${transactionData.refId}</span></div>
-                    <div class="flex justify-between p-1"><span class="text-gray-500">Waktu</span><span>${transactionData.timestamp}</span></div>
                     <hr class="my-2 border-dashed">
                     <div class="flex justify-between p-1"><span class="text-gray-500">Penerima</span><span class="font-semibold">${transactionData.merchant.name}</span></div>
-                    <div class="flex justify-between p-1"><span class="text-gray-500">NMID</span><span>${transactionData.merchant.nmid}</span></div>
+                    ${transactionData.type === 'Transfer' ? `<div class="flex justify-between p-1"><span class="text-gray-500">Bank</span><span>${transactionData.merchant.bank} - ${transactionData.merchant.account}</span></div>` : ''}
                     <hr class="my-2 border-dashed">
-                    <div class="flex justify-between p-1"><span class="text-gray-500">Nominal</span><span>${formatCurrency(transactionData.payment.amount)}</span></div>
-                    <div class="flex justify-between p-1"><span class="text-gray-500">Biaya Admin</span><span>${formatCurrency(transactionData.payment.adminFee)}</span></div>
-                    <div class="flex justify-between p-2 mt-2 border-t-2">
-                        <span class="font-bold">Total</span><span class="font-bold text-xl text-blue-600">${formatCurrency(transactionData.payment.total)}</span>
-                    </div>
+                    <div class="flex justify-between p-2 mt-2 border-t-2"><span class="font-bold">Total Dibayar</span><span class="font-bold text-xl text-blue-600">${formatCurrency(transactionData.payment.total)}</span></div>
                 `;
                 showView('success');
-                showToast('Pembayaran berhasil!');
+                showToast('Transaksi berhasil!');
             }, 1000);
         }
+
+        document.getElementById('pay-button').addEventListener('click', () => showView('scanner'));
+        document.getElementById('transfer-button').addEventListener('click', () => showView('transfer'));
+        document.getElementById('receive-button').addEventListener('click', () => showView('receive'));
+        document.getElementById('history-button').addEventListener('click', () => { renderHistory(); showView('history'); });
+        document.querySelectorAll('.back-button').forEach(btn => btn.addEventListener('click', () => resetToHome()));
         
-        document.getElementById('download-receipt').addEventListener('click', () => {
-            html2canvas(document.getElementById('receipt'), { scale: 2 }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `bukti-${transactionData.refId}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-            });
+        document.getElementById('check-account-button').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('transfer-amount').value);
+            const accNum = document.getElementById('account-number').value;
+            const bank = document.getElementById('bank-select').value;
+            if (isNaN(amount) || amount <= 0 || !accNum) { showError("Isi semua data dengan benar."); return; }
+            
+            showView('loading');
+            document.getElementById('loading-text').textContent = "Menghubungi Bank...";
+            setTimeout(() => {
+                const recipientName = bankAccountDatabase[bank]?.[accNum];
+                if (recipientName) {
+                    showView('confirmation', { type: 'Transfer', merchant: { name: recipientName, bank: bank, account: accNum }, payment: { amount, adminFee: 6500 } });
+                } else {
+                    showError("Nomor rekening tidak ditemukan atau tidak terdaftar.");
+                    showView('transfer');
+                }
+            }, 1500);
         });
 
-        document.getElementById('reset-data-button').addEventListener('click', () => {
-            if (confirm('Apakah Anda yakin ingin mereset semua data (saldo dan riwayat transaksi)?')) {
-                localStorage.removeItem('appState');
-                loadState();
-                updateHomeScreen();
-                showToast('Data berhasil direset.');
+        document.getElementById('confirm-pay-button').addEventListener('click', () => { currentPin = ''; showView('pin'); });
+        document.getElementById('generate-qr-button').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('receive-amount').value) || 0;
+            const qrData = JSON.stringify({ name: appState.senderName, amount });
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById('qrcode'), { text: qrData, width: 200, height: 200 });
+            document.getElementById('qr-receiver-name').textContent = appState.senderName;
+            document.getElementById('qr-receive-amount').textContent = amount > 0 ? formatCurrency(amount) : 'Jumlah Bebas';
+            showView('showQr');
+        });
+        document.getElementById('simulate-receive-button').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('receive-amount').value) || 50000;
+            appState.balance += amount;
+            appState.transactions.push({ type: 'Dana Masuk', sender: { name: 'Pengirim Simulasi' }, merchant: { name: appState.senderName }, payment: { total: amount, amount, adminFee: 0 }, timestamp: new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) });
+            saveState();
+            showToast(`Dana sebesar ${formatCurrency(amount)} berhasil diterima!`);
+            resetToHome();
+        });
+        document.getElementById('download-receipt').addEventListener('click', () => html2canvas(document.getElementById('receipt'), { scale: 2 }).then(c => { const l = document.createElement('a'); l.download = `bukti-${transactionData.refId}.png`; l.href = c.toDataURL(); l.click(); }));
+        document.getElementById('reset-data-button').addEventListener('click', () => { if (confirm('Yakin ingin reset data?')) { localStorage.removeItem('walletAppState'); loadState(); updateHomeScreen(); showToast('Data direset.'); } });
+        
+        const keypad = document.getElementById('keypad');
+        const pinDots = document.getElementById('pin-dots');
+        keypad.innerHTML = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 002.828 0L21 12M3 12l6.414-6.414a2 2 0 012.828 0L21 12"></path></svg>'].map(k => `<button class="keypad-btn p-4 rounded-lg flex justify-center items-center ${!k && 'invisible'}">${k}</button>`).join('');
+        pinDots.innerHTML = Array(6).fill('<div class="pin-dot"></div>').join('');
+        keypad.addEventListener('click', e => {
+            const key = e.target.closest('button');
+            if (!key) return;
+            if (key.querySelector('svg')) { currentPin = currentPin.slice(0, -1); } 
+            else if (currentPin.length < 6 && key.textContent) { currentPin += key.textContent; }
+            
+            [...pinDots.children].forEach((d, i) => d.classList.toggle('filled', i < currentPin.length));
+            if (currentPin.length === 6) finalizeTransaction();
+        });
+
+        function parseTLV(tlvString) {
+            const result = {}; let position = 0;
+            while (position < tlvString.length) {
+                if (position + 4 > tlvString.length) break;
+                const tag = tlvString.substring(position, position + 2); position += 2;
+                const length = parseInt(tlvString.substring(position, position + 2), 10); position += 2;
+                if (isNaN(length) || position + length > tlvString.length) break;
+                const value = tlvString.substring(position, position + length); position += length;
+                if (['26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '62', '64'].includes(tag)) {
+                    result[tag] = parseTLV(value);
+                } else { result[tag] = value; }
             }
-        });
+            return result;
+        }
 
-        // --- INITIALIZATION ---
-        loadState();
-        updateHomeScreen();
+        loadState(); updateHomeScreen();
+        const bankSelect = document.getElementById('bank-select');
+        banks.forEach(b => bankSelect.innerHTML += `<option>${b}</option>`);
     });
     </script>
 </body>
