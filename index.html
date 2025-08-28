@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRIS Scanner & Payment Simulator</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- QR Code Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #qr-reader {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #qr-reader-results div:first-child {
+            word-break: break-all;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-label {
+            color: #6b7280;
+        }
+        .result-value {
+            color: #111827;
+            font-weight: 500;
+            text-align: right;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6 md:p-8 space-y-6">
+        <div class="text-center">
+            <h1 class="text-2xl font-bold text-gray-900">QRIS Payment Simulator</h1>
+            <p class="text-gray-500 mt-1">Scan atau upload QRIS untuk memulai</p>
+        </div>
+
+        <!-- QR Scanner Section -->
+        <div id="scanner-section">
+            <div id="qr-reader" class="w-full"></div>
+            <div class="text-center text-gray-500 my-4">atau</div>
+            <label for="qr-file-input" class="w-full flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                <span>Upload Gambar QRIS</span>
+            </label>
+            <input type="file" id="qr-file-input" accept="image/*" class="hidden">
+        </div>
+
+        <!-- Loading Section -->
+        <div id="loading-section" class="hidden flex-col items-center justify-center space-y-4 py-8">
+            <div class="loader"></div>
+            <p class="text-gray-600">Mendekode QRIS...</p>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="hidden space-y-4">
+            <h2 class="text-xl font-semibold text-center text-gray-800">Detail Merchant</h2>
+            <div id="qris-result-container" class="bg-gray-50 rounded-lg p-4">
+                <!-- Results will be injected here -->
+            </div>
+        </div>
+
+        <!-- Payment Section -->
+        <div id="payment-section" class="hidden space-y-4">
+            <h2 class="text-xl font-semibold text-center text-gray-800">Simulasi Pembayaran</h2>
+            <div>
+                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Nominal Pembayaran (Rp)</label>
+                <input type="number" id="amount" name="amount" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Contoh: 50000">
+            </div>
+            <button id="pay-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                Bayar
+            </button>
+        </div>
+
+        <!-- Status Section -->
+        <div id="status-section" class="hidden text-center py-8">
+             <div class="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
+                <svg class="h-10 w-10 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h2 id="status-title" class="text-2xl font-bold text-gray-900 mt-4">Pembayaran Berhasil!</h2>
+            <p id="status-message" class="text-gray-600 mt-2"></p>
+            <button id="scan-again-button" class="mt-6 w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors">
+                Scan Lagi
+            </button>
+        </div>
+        
+        <!-- Error Message -->
+        <div id="error-message" class="hidden text-center p-4 bg-red-100 text-red-700 rounded-lg"></div>
+
+    </div>
+
+    <script>
+        // DOM Elements
+        const scannerSection = document.getElementById('scanner-section');
+        const loadingSection = document.getElementById('loading-section');
+        const resultSection = document.getElementById('result-section');
+        const paymentSection = document.getElementById('payment-section');
+        const statusSection = document.getElementById('status-section');
+        const errorMessage = document.getElementById('error-message');
+        const fileInput = document.getElementById('qr-file-input');
+        const payButton = document.getElementById('pay-button');
+        const scanAgainButton = document.getElementById('scan-again-button');
+        const qrisResultContainer = document.getElementById('qris-result-container');
+        const amountInput = document.getElementById('amount');
+
+        let merchantData = {};
+        
+        /**
+         * Recursively parses a TLV (Tag-Length-Value) string.
+         * @param {string} tlvString The TLV string to parse.
+         * @returns {object} An object representing the parsed TLV data.
+         */
+        function parseTLV(tlvString) {
+            const result = {};
+            let position = 0;
+            while (position < tlvString.length) {
+                if (position + 4 > tlvString.length) break; // Prevent reading past the end
+                const tag = tlvString.substring(position, position + 2);
+                position += 2;
+                const length = parseInt(tlvString.substring(position, position + 2), 10);
+                position += 2;
+                 if (isNaN(length) || position + length > tlvString.length) break; // Prevent reading past the end
+                const value = tlvString.substring(position, position + length);
+                position += length;
+
+                // If the tag is a template (contains nested TLV), parse it recursively
+                if (['26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '62', '64'].includes(tag)) {
+                    result[tag] = parseTLV(value);
+                } else {
+                    result[tag] = value;
+                }
+            }
+            return result;
+        }
+
+        /**
+         * Processes the decoded QRIS string and updates the UI.
+         * @param {string} decodedText The raw string from the QRIS code.
+         */
+        function onScanSuccess(decodedText) {
+            // Stop the scanner
+            html5QrcodeScanner.clear().catch(error => {
+                console.error("Failed to clear html5QrcodeScanner.", error);
+            });
+
+            // Show loading and hide scanner
+            scannerSection.classList.add('hidden');
+            loadingSection.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+
+            setTimeout(() => { // Simulate processing delay
+                try {
+                    const parsedData = parseTLV(decodedText);
+                    console.log("Parsed QRIS Data:", parsedData);
+
+                    // Extract key information
+                    // Merchant info is typically in one of the tags from 26 to 51
+                    let merchantInfo = null;
+                    for (let i = 26; i <= 51; i++) {
+                        const tag = i.toString();
+                        if (parsedData[tag]) {
+                            merchantInfo = parsedData[tag];
+                            break;
+                        }
+                    }
+                    
+                    if (!parsedData['59'] || !merchantInfo || !merchantInfo['02']) {
+                         throw new Error("Format QRIS tidak valid atau tidak lengkap.");
+                    }
+
+                    merchantData = {
+                        merchantName: parsedData['59'] || 'Tidak Tersedia',
+                        nmid: merchantInfo['02'] || 'Tidak Tersedia',
+                        merchantCity: parsedData['60'] || 'Tidak Tersedia',
+                        acquirer: merchantInfo['00'] || 'Tidak Tersedia', // GUID
+                    };
+
+                    // Display results
+                    displayResults(merchantData);
+
+                    // Update UI state
+                    loadingSection.classList.add('hidden');
+                    resultSection.classList.remove('hidden');
+                    paymentSection.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error("QRIS Parsing Error:", error);
+                    showError("Gagal memproses QRIS. Pastikan QR code adalah QRIS yang valid. " + error.message);
+                    resetUI();
+                }
+            }, 500);
+        }
+        
+        /**
+         * Displays the parsed merchant data in the UI.
+         * @param {object} data The merchant data object.
+         */
+        function displayResults(data) {
+            qrisResultContainer.innerHTML = `
+                <div class="result-item">
+                    <span class="result-label">Nama Merchant</span>
+                    <span class="result-value">${data.merchantName}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">NMID</span>
+                    <span class="result-value">${data.nmid}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Kota</span>
+                    <span class="result-value">${data.merchantCity}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Acquirer</span>
+                    <span class="result-value">${data.acquirer}</span>
+                </div>
+            `;
+        }
+        
+        /**
+         * Handles scanner errors.
+         * @param {string} error The error message.
+         */
+        function onScanFailure(error) {
+            // This function is called frequently, so we can ignore most errors.
+            // console.warn(`Code scan error = ${error}`);
+        }
+        
+        /**
+         * Displays an error message in the UI.
+         * @param {string} message The message to display.
+         */
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        /**
+         * Resets the UI to its initial state.
+         */
+        function resetUI() {
+            scannerSection.classList.remove('hidden');
+            loadingSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            paymentSection.classList.add('hidden');
+            statusSection.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            amountInput.value = '';
+            merchantData = {};
+            // Re-render the scanner if it was cleared
+            if (!document.getElementById('qr-reader__dashboard_section_csr')) {
+                 html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            }
+        }
+
+        // --- Event Listeners ---
+
+        payButton.addEventListener('click', () => {
+            const amount = parseFloat(amountInput.value);
+            if (isNaN(amount) || amount <= 0) {
+                showError("Silakan masukkan nominal pembayaran yang valid.");
+                return;
+            }
+
+            errorMessage.classList.add('hidden'); // Hide error if validation passes
+
+            const formattedAmount = new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+
+            document.getElementById('status-title').textContent = 'Pembayaran Berhasil!';
+            document.getElementById('status-message').innerHTML = `
+                Anda telah berhasil melakukan pembayaran sebesar <br>
+                <strong class="text-lg">${formattedAmount}</strong> ke <strong class="text-lg">${merchantData.merchantName}</strong>.
+            `;
+
+            resultSection.classList.add('hidden');
+            paymentSection.classList.add('hidden');
+            statusSection.classList.remove('hidden');
+        });
+
+        scanAgainButton.addEventListener('click', resetUI);
+
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length === 0) {
+                return;
+            }
+            const imageFile = e.target.files[0];
+            
+            // Stop the camera scanner before processing a file to avoid conflicts.
+            if (html5QrcodeScanner && html5QrcodeScanner.getState() === Html5QrcodeScannerState.SCANNING) {
+                html5QrcodeScanner.clear().catch(err => console.error("Error clearing scanner:", err));
+            }
+
+            // Use the base Html5Qrcode class for file scanning.
+            const html5QrCode = new Html5Qrcode("qr-reader", /* verbose= */ false);
+            html5QrCode.scanFile(imageFile, /* showImage= */ false)
+                .then(decodedText => {
+                    onScanSuccess(decodedText);
+                })
+                .catch(err => {
+                    showError('Gagal memindai QR code dari gambar. Coba gambar lain.');
+                    console.error(`Error scanning file. Reason: ${err}`);
+                    // If file scan fails, reset to show the camera scanner again.
+                    resetUI();
+                });
+        });
+
+        // --- Initialize Scanner ---
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            "qr-reader", {
+                fps: 10,
+                qrbox: {
+                    width: 250,
+                    height: 250
+                },
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [
+                    Html5QrcodeScanType.SCAN_TYPE_CAMERA,
+                    Html5QrcodeScanType.SCAN_TYPE_FILE
+                ]
+            },
+            /* verbose= */
+            false);
+
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+    </script>
+</body>
+</html>
