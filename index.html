@@ -3,373 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRIS Scanner & Payment Simulator</title>
-    <!-- Tailwind CSS for styling -->
+    <title>Simulator Pembayaran QRIS (Lengkap)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- QR Code Scanner Library -->
+    <!-- QR Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- HTML to Image Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        /* Custom styles */
-        body {
-            font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #qr-reader {
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        #qr-reader-results div:first-child {
-            word-break: break-all;
-        }
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .result-item:last-child {
-            border-bottom: none;
-        }
-        .result-label {
-            color: #6b7280;
-            font-size: 0.875rem;
-        }
-        .result-value {
-            color: #111827;
-            font-weight: 500;
-            text-align: right;
-            font-size: 0.875rem;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        #qr-reader { border-radius: 8px; overflow: hidden; }
+        .detail-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #e5e7eb; }
+        .detail-item:last-child { border-bottom: none; }
+        .detail-label { color: #6b7280; font-size: 0.875rem; }
+        .detail-value { color: #111827; font-weight: 500; text-align: right; font-size: 0.875rem; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #toast-notification { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); transition: bottom 0.5s ease-in-out; }
+        #toast-notification.show { bottom: 20px; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
 
-    <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6 md:p-8 space-y-6">
-        <div class="text-center">
-            <h1 class="text-2xl font-bold text-gray-900">QRIS Payment Simulator</h1>
-            <p class="text-gray-500 mt-1">Scan atau upload QRIS untuk memulai</p>
-        </div>
-
-        <!-- QR Scanner Section -->
-        <div id="scanner-section">
-            <div id="qr-reader" class="w-full"></div>
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 md:p-8 space-y-6">
+        
+        <!-- Initial View: Scanner -->
+        <div id="scanner-view">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-900">Bayar dengan QRIS</h1>
+                <p class="text-gray-500 mt-1">Arahkan kamera atau upload gambar QRIS</p>
+            </div>
+            <div id="qr-reader" class="w-full mt-4"></div>
             <div class="text-center text-gray-500 my-4">atau</div>
             <label for="qr-file-input" class="w-full flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                </svg>
-                <span>Upload Gambar QRIS</span>
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <span>Upload dari Galeri</span>
             </label>
             <input type="file" id="qr-file-input" accept="image/*" class="hidden">
         </div>
 
-        <!-- Loading Section -->
-        <div id="loading-section" class="hidden flex-col items-center justify-center space-y-4 py-8">
+        <!-- Loading View -->
+        <div id="loading-view" class="hidden flex-col items-center justify-center space-y-4 py-8">
             <div class="loader"></div>
-            <p class="text-gray-600">Mendekode QRIS...</p>
+            <p class="text-gray-600">Memproses QRIS...</p>
         </div>
 
-        <!-- Result Section -->
-        <div id="result-section" class="hidden space-y-4">
-            <h2 class="text-xl font-semibold text-center text-gray-800">Detail Merchant</h2>
-            <div id="qris-result-container" class="bg-gray-50 rounded-lg p-4">
-                <!-- Results will be injected here -->
-            </div>
-        </div>
-
-        <!-- Payment Section -->
-        <div id="payment-section" class="hidden space-y-4">
-            <h2 class="text-xl font-semibold text-center text-gray-800">Simulasi Pembayaran</h2>
+        <!-- Payment Details View -->
+        <div id="payment-view" class="hidden space-y-4">
+            <h2 class="text-xl font-semibold text-center text-gray-800">Detail Pembayaran</h2>
+            <div id="merchant-details" class="bg-gray-50 rounded-lg p-4"></div>
             <div>
-                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Nominal Pembayaran (Rp)</label>
-                <input type="number" id="amount" name="amount" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Contoh: 50000">
+                <label for="sender-name" class="block text-sm font-medium text-gray-700 mb-1">Nama Pengirim</label>
+                <input type="text" id="sender-name" value="Maechell" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
-            <button id="pay-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
-                Bayar
-            </button>
+             <div>
+                <label for="source-of-funds" class="block text-sm font-medium text-gray-700 mb-1">Sumber Dana</label>
+                <select id="source-of-funds" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <option>Rekening Utama (*** 1234)</option>
+                    <option>Rekening Tabungan (*** 5678)</option>
+                    <option>E-Wallet Balance</option>
+                </select>
+            </div>
+            <div>
+                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+                <input type="number" id="amount" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="0">
+            </div>
+            <div>
+                <label for="purpose" class="block text-sm font-medium text-gray-700 mb-1">Tujuan / Catatan (Opsional)</label>
+                <input type="text" id="purpose" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Contoh: Pembelian Kopi">
+            </div>
+            <button id="next-to-confirm-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all">Lanjutkan</button>
+        </div>
+        
+        <!-- Confirmation View -->
+        <div id="confirmation-view" class="hidden space-y-4">
+            <h2 class="text-xl font-semibold text-center text-gray-800">Konfirmasi Pembayaran</h2>
+            <div id="confirmation-details" class="bg-gray-50 rounded-lg p-4"></div>
+            <div class="flex gap-4">
+                <button id="back-to-payment-button" class="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300">Kembali</button>
+                <button id="confirm-pay-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">Konfirmasi & Bayar</button>
+            </div>
         </div>
 
-        <!-- Status Section (Proof of Payment) -->
-        <div id="status-section" class="hidden text-center py-4">
-             <div class="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
-                <svg class="h-10 w-10 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
+        <!-- Success View (Receipt) -->
+        <div id="success-view" class="hidden text-center py-4">
+            <div class="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
+                <svg class="h-10 w-10 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
             </div>
-            <h2 id="status-title" class="text-2xl font-bold text-gray-900 mt-4">Pembayaran Berhasil!</h2>
-            <p class="text-gray-500">Berikut adalah bukti pembayaran Anda.</p>
-            <div id="payment-proof" class="mt-4"></div>
-            <button id="scan-again-button" class="mt-6 w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors">
-                Scan Lagi
-            </button>
+            <h2 class="text-2xl font-bold text-gray-900 mt-4">Transaksi Berhasil</h2>
+            <p class="text-gray-500">Pembayaran telah berhasil diproses.</p>
+            <div id="payment-receipt" class="mt-4 text-left bg-white rounded-lg p-4 border border-gray-200">
+                <!-- Receipt content will be injected here -->
+            </div>
+            <div class="flex gap-4 mt-6">
+                <button id="download-receipt-button" class="w-full bg-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-800">Download Bukti</button>
+                <button id="scan-again-button" class="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300">Selesai</button>
+            </div>
         </div>
         
         <!-- Error Message -->
         <div id="error-message" class="hidden text-center p-4 bg-red-100 text-red-700 rounded-lg"></div>
+    </div>
 
+    <!-- Toast Notification -->
+    <div id="toast-notification" class="bg-gray-800 text-white text-sm py-2 px-4 rounded-full shadow-lg flex items-center gap-2">
+        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span id="toast-message"></span>
     </div>
 
     <script>
-        // DOM Elements
-        const scannerSection = document.getElementById('scanner-section');
-        const loadingSection = document.getElementById('loading-section');
-        const resultSection = document.getElementById('result-section');
-        const paymentSection = document.getElementById('payment-section');
-        const statusSection = document.getElementById('status-section');
+        const views = {
+            scanner: document.getElementById('scanner-view'),
+            loading: document.getElementById('loading-view'),
+            payment: document.getElementById('payment-view'),
+            confirmation: document.getElementById('confirmation-view'),
+            success: document.getElementById('success-view'),
+        };
         const errorMessage = document.getElementById('error-message');
         const fileInput = document.getElementById('qr-file-input');
-        const payButton = document.getElementById('pay-button');
-        const scanAgainButton = document.getElementById('scan-again-button');
-        const qrisResultContainer = document.getElementById('qris-result-container');
-        const amountInput = document.getElementById('amount');
-        const paymentProofContainer = document.getElementById('payment-proof');
-
-        let merchantData = {};
+        const merchantDetailsContainer = document.getElementById('merchant-details');
+        const confirmationDetailsContainer = document.getElementById('confirmation-details');
+        const receiptContainer = document.getElementById('payment-receipt');
+        const toast = {
+            element: document.getElementById('toast-notification'),
+            message: document.getElementById('toast-message'),
+        };
+        const inputs = {
+            senderName: document.getElementById('sender-name'),
+            sourceOfFunds: document.getElementById('source-of-funds'),
+            amount: document.getElementById('amount'),
+            purpose: document.getElementById('purpose'),
+        };
         
-        /**
-         * Recursively parses a TLV (Tag-Length-Value) string.
-         * @param {string} tlvString The TLV string to parse.
-         * @returns {object} An object representing the parsed TLV data.
-         */
-        function parseTLV(tlvString) {
-            const result = {};
-            let position = 0;
-            while (position < tlvString.length) {
-                if (position + 4 > tlvString.length) break;
-                const tag = tlvString.substring(position, position + 2);
-                position += 2;
-                const length = parseInt(tlvString.substring(position, position + 2), 10);
-                position += 2;
-                 if (isNaN(length) || position + length > tlvString.length) break;
-                const value = tlvString.substring(position, position + length);
-                position += length;
+        let transactionData = {};
 
-                if (['26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '62', '64'].includes(tag)) {
-                    result[tag] = parseTLV(value);
-                } else {
-                    result[tag] = value;
-                }
+        // --- View Management ---
+        function showView(viewName) {
+            Object.values(views).forEach(view => view.classList.add('hidden'));
+            errorMessage.classList.add('hidden');
+            if (views[viewName]) {
+                views[viewName].classList.remove('hidden');
+            }
+        }
+
+        // --- QRIS Parsing Logic ---
+        function parseTLV(tlv) {
+            const result = {}; let i = 0;
+            while (i < tlv.length) {
+                const tag = tlv.substring(i, i + 2); i += 2;
+                const len = parseInt(tlv.substring(i, i + 2), 10); i += 2;
+                if (isNaN(len) || i + len > tlv.length) break;
+                const val = tlv.substring(i, i + len); i += len;
+                if (['26', '62', '64'].includes(tag)) result[tag] = parseTLV(val);
+                else result[tag] = val;
             }
             return result;
         }
 
-        /**
-         * Processes the decoded QRIS string and updates the UI.
-         * @param {string} decodedText The raw string from the QRIS code.
-         */
         function onScanSuccess(decodedText) {
-            html5QrcodeScanner.clear().catch(error => {
-                console.error("Failed to clear html5QrcodeScanner.", error);
-            });
-
-            scannerSection.classList.add('hidden');
-            loadingSection.classList.remove('hidden');
-            errorMessage.classList.add('hidden');
-
+            html5QrcodeScanner.clear().catch(err => console.error("Scanner clear failed", err));
+            showView('loading');
             setTimeout(() => {
                 try {
-                    const parsedData = parseTLV(decodedText);
-                    console.log("Parsed QRIS Data:", parsedData);
-
-                    let merchantInfo = null;
-                    for (let i = 26; i <= 51; i++) {
-                        const tag = i.toString();
-                        if (parsedData[tag]) {
-                            merchantInfo = parsedData[tag];
-                            break;
-                        }
-                    }
+                    const data = parseTLV(decodedText);
+                    const merchantInfo = data['26'] || {};
+                    if (!data['59'] || !merchantInfo['02']) throw new Error("Format QRIS tidak valid.");
                     
-                    if (!parsedData['59'] || !merchantInfo || !merchantInfo['02']) {
-                         throw new Error("Format QRIS tidak valid atau tidak lengkap.");
-                    }
-
-                    merchantData = {
-                        merchantName: parsedData['59'] || 'Tidak Tersedia',
-                        nmid: merchantInfo['02'] || 'Tidak Tersedia',
-                        merchantCity: parsedData['60'] || 'Tidak Tersedia',
-                        acquirer: merchantInfo['00'] || 'Tidak Tersedia',
+                    transactionData.merchant = {
+                        name: data['59'] || 'N/A',
+                        city: data['60'] || 'N/A',
+                        nmid: merchantInfo['02'] || 'N/A'
                     };
 
-                    displayResults(merchantData);
-
-                    loadingSection.classList.add('hidden');
-                    resultSection.classList.remove('hidden');
-                    paymentSection.classList.remove('hidden');
-
-                } catch (error) {
-                    console.error("QRIS Parsing Error:", error);
-                    showError("Gagal memproses QRIS. Pastikan QR code adalah QRIS yang valid. " + error.message);
-                    resetUI();
+                    merchantDetailsContainer.innerHTML = `
+                        <div class="detail-item"><span class="detail-label">Penerima</span><span class="detail-value">${transactionData.merchant.name}</span></div>
+                        <div class="detail-item"><span class="detail-label">Lokasi</span><span class="detail-value">${transactionData.merchant.city}</span></div>
+                    `;
+                    showView('payment');
+                } catch (e) {
+                    showError(e.message);
+                    resetApp();
                 }
             }, 500);
         }
-        
-        /**
-         * Displays the parsed merchant data in the UI.
-         * @param {object} data The merchant data object.
-         */
-        function displayResults(data) {
-            qrisResultContainer.innerHTML = `
-                <div class="result-item">
-                    <span class="result-label">Nama Merchant</span>
-                    <span class="result-value">${data.merchantName}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">NMID</span>
-                    <span class="result-value">${data.nmid}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Kota</span>
-                    <span class="result-value">${data.merchantCity}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Acquirer</span>
-                    <span class="result-value">${data.acquirer}</span>
-                </div>
-            `;
-        }
-        
-        function onScanFailure(error) {
-            // console.warn(`Code scan error = ${error}`);
-        }
-        
-        function showError(message) {
-            errorMessage.textContent = message;
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
             errorMessage.classList.remove('hidden');
         }
 
-        function resetUI() {
-            scannerSection.classList.remove('hidden');
-            loadingSection.classList.add('hidden');
-            resultSection.classList.add('hidden');
-            paymentSection.classList.add('hidden');
-            statusSection.classList.add('hidden');
-            errorMessage.classList.add('hidden');
-            amountInput.value = '';
-            merchantData = {};
+        function resetApp() {
+            transactionData = {};
+            Object.values(inputs).forEach(input => input.value = '');
+            inputs.senderName.value = 'Maechell'; // Reset to default
+            showView('scanner');
             if (!document.getElementById('qr-reader__dashboard_section_csr')) {
-                 html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                html5QrcodeScanner.render(onScanSuccess, () => {});
             }
         }
 
-        // --- Event Listeners ---
+        function showToast(msg) {
+            toast.message.textContent = msg;
+            toast.element.classList.add('show');
+            setTimeout(() => toast.element.classList.remove('show'), 4000);
+        }
 
-        payButton.addEventListener('click', () => {
-            const amount = parseFloat(amountInput.value);
+        const formatCurrency = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+
+        // --- Event Listeners ---
+        document.getElementById('next-to-confirm-button').addEventListener('click', () => {
+            const amount = parseFloat(inputs.amount.value);
             if (isNaN(amount) || amount <= 0) {
-                showError("Silakan masukkan nominal pembayaran yang valid.");
+                showError("Masukkan nominal yang valid.");
                 return;
             }
+            
+            transactionData.payment = {
+                senderName: inputs.senderName.value || 'Tanpa Nama',
+                sourceOfFunds: inputs.sourceOfFunds.value,
+                amount: amount,
+                adminFee: 2500,
+                total: amount + 2500,
+                purpose: inputs.purpose.value || 'Lainnya',
+            };
 
-            errorMessage.classList.add('hidden');
-
-            // --- Sender Details ---
-            const senderName = "Maechell";
-            const senderPhone = "+62 812-3456-7890";
-
-            // --- Transaction Details ---
-            const transactionId = `TRX${Date.now()}`;
-            const timestamp = new Date().toLocaleString('id-ID', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            }) + ' WIB';
-            const formattedAmount = new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR',
-                minimumFractionDigits: 0
-            }).format(amount);
-
-            // --- Generate Payment Proof HTML ---
-            paymentProofContainer.innerHTML = `
-                <div class="text-left bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div class="result-item">
-                        <span class="result-label">ID Transaksi</span>
-                        <span class="result-value font-mono">${transactionId}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Waktu Pembayaran</span>
-                        <span class="result-value">${timestamp}</span>
-                    </div>
-                     <div class="result-item">
-                        <span class="result-label">Pengirim</span>
-                        <span class="result-value">${senderName}</span>
-                    </div>
-                     <div class="result-item">
-                        <span class="result-label">No. Telepon</span>
-                        <span class="result-value">${senderPhone}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Penerima</span>
-                        <span class="result-value">${merchantData.merchantName}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Jumlah Pembayaran</span>
-                        <span class="result-value text-lg font-bold text-blue-600">${formattedAmount}</span>
-                    </div>
+            confirmationDetailsContainer.innerHTML = `
+                <div class="detail-item"><span class="detail-label">Sumber Dana</span><span class="detail-value">${transactionData.payment.sourceOfFunds}</span></div>
+                <div class="detail-item"><span class="detail-label">Penerima</span><span class="detail-value">${transactionData.merchant.name}</span></div>
+                <hr class="my-2">
+                <div class="detail-item"><span class="detail-label">Nominal</span><span class="detail-value">${formatCurrency(transactionData.payment.amount)}</span></div>
+                <div class="detail-item"><span class="detail-label">Biaya Admin</span><span class="detail-value">${formatCurrency(transactionData.payment.adminFee)}</span></div>
+                <div class="detail-item border-t-2 border-gray-300 pt-2 mt-2">
+                    <span class="detail-label font-bold">Total</span>
+                    <span class="detail-value text-lg font-bold text-blue-600">${formatCurrency(transactionData.payment.total)}</span>
                 </div>
             `;
-
-            resultSection.classList.add('hidden');
-            paymentSection.classList.add('hidden');
-            statusSection.classList.remove('hidden');
+            showView('confirmation');
         });
 
-        scanAgainButton.addEventListener('click', resetUI);
+        document.getElementById('back-to-payment-button').addEventListener('click', () => showView('payment'));
 
+        document.getElementById('confirm-pay-button').addEventListener('click', () => {
+            transactionData.refId = `TRX${Date.now()}`;
+            transactionData.timestamp = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) + ' WIB';
+
+            receiptContainer.innerHTML = `
+                <h3 class="text-center font-semibold text-lg mb-2">Bukti Transaksi</h3>
+                <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value text-green-600 font-bold">Berhasil</span></div>
+                <div class="detail-item"><span class="detail-label">No. Referensi</span><span class="detail-value font-mono">${transactionData.refId}</span></div>
+                <div class="detail-item"><span class="detail-label">Waktu</span><span class="detail-value">${transactionData.timestamp}</span></div>
+                <hr class="my-2 border-dashed">
+                <h4 class="font-semibold mt-3 mb-1">Detail Pengirim</h4>
+                <div class="detail-item"><span class="detail-label">Nama</span><span class="detail-value">${transactionData.payment.senderName}</span></div>
+                <div class="detail-item"><span class="detail-label">Sumber Dana</span><span class="detail-value">${transactionData.payment.sourceOfFunds}</span></div>
+                <h4 class="font-semibold mt-3 mb-1">Detail Penerima</h4>
+                <div class="detail-item"><span class="detail-label">Nama</span><span class="detail-value">${transactionData.merchant.name}</span></div>
+                <div class="detail-item"><span class="detail-label">NMID</span><span class="detail-value">${transactionData.merchant.nmid}</span></div>
+                <h4 class="font-semibold mt-3 mb-1">Detail Pembayaran</h4>
+                <div class="detail-item"><span class="detail-label">Tujuan</span><span class="detail-value">${transactionData.payment.purpose}</span></div>
+                <div class="detail-item"><span class="detail-label">Nominal</span><span class="detail-value">${formatCurrency(transactionData.payment.amount)}</span></div>
+                <div class="detail-item"><span class="detail-label">Biaya Admin</span><span class="detail-value">${formatCurrency(transactionData.payment.adminFee)}</span></div>
+                <div class="detail-item border-t-2 border-gray-300 pt-2 mt-2">
+                    <span class="detail-label font-bold text-base">Total Dibayar</span>
+                    <span class="detail-value text-xl font-bold text-blue-600">${formatCurrency(transactionData.payment.total)}</span>
+                </div>
+            `;
+            showView('success');
+            showToast(`Pembayaran ke ${transactionData.merchant.name} berhasil!`);
+        });
+
+        document.getElementById('download-receipt-button').addEventListener('click', () => {
+            html2canvas(receiptContainer, { scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `bukti-pembayaran-${transactionData.refId}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
+
+        document.getElementById('scan-again-button').addEventListener('click', resetApp);
+        
         fileInput.addEventListener('change', e => {
-            if (e.target.files.length === 0) { return; }
-            const imageFile = e.target.files[0];
-            
-            if (html5QrcodeScanner && html5QrcodeScanner.getState() === Html5QrcodeScannerState.SCANNING) {
-                html5QrcodeScanner.clear().catch(err => console.error("Error clearing scanner:", err));
-            }
-
+            if (!e.target.files.length) return;
+            html5QrcodeScanner.clear().catch(err => console.error("Scanner clear failed", err));
             const html5QrCode = new Html5Qrcode("qr-reader", false);
-            html5QrCode.scanFile(imageFile, false)
-                .then(decodedText => { onScanSuccess(decodedText); })
+            html5QrCode.scanFile(e.target.files[0], false)
+                .then(onScanSuccess)
                 .catch(err => {
-                    showError('Gagal memindai QR code dari gambar. Coba gambar lain.');
-                    console.error(`Error scanning file. Reason: ${err}`);
-                    resetUI();
+                    showError('Gagal memindai gambar.');
+                    resetApp();
                 });
         });
 
-        // --- Initialize Scanner ---
-        const html5QrcodeScanner = new Html5QrcodeScanner(
-            "qr-reader", {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [
-                    Html5QrcodeScanType.SCAN_TYPE_CAMERA,
-                    Html5QrcodeScanType.SCAN_TYPE_FILE
-                ]
-            },
-            false);
-
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-
+        // --- Initializer ---
+        const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true,
+        }, false);
+        
+        showView('scanner');
+        html5QrcodeScanner.render(onScanSuccess, () => {});
     </script>
 </body>
 </html>
