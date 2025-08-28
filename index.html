@@ -1,306 +1,422 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulator Dompet Digital</title>
+    <title>AuraBank - Dashboard Fungsional</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .view { display: none; }
-        .view.active { display: block; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .pin-dot { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid #9ca3af; transition: background-color 0.2s; }
-        .pin-dot.filled { background-color: #3b82f6; border-color: #3b82f6; }
-        .keypad-btn { transition: background-color 0.1s; }
-        .keypad-btn:active { background-color: #d1d5db; }
-        #toast { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); transition: bottom 0.5s ease-in-out; z-index: 50; }
-        #toast.show { bottom: 20px; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .transition-all-smooth { transition: all 0.3s ease-in-out; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 50; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        .modal-content { transform: scale(0.95) translateY(10px); transition: transform 0.3s ease; }
+        .modal-overlay.visible .modal-content { transform: scale(1) translateY(0); }
+
+        #notification {
+            position: fixed; bottom: -100px; left: 50%;
+            transform: translateX(-50%);
+            transition: bottom 0.5s ease; z-index: 100;
+        }
+        #notification.show { bottom: 20px; }
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
 
-    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div id="app-container" class="p-6 md:p-8">
-            
-            <!-- Home View -->
-            <div id="home-view" class="view active space-y-6">
-                <div class="flex justify-between items-center"><p id="home-sender-name" class="text-xl font-bold">Maechell</p><button id="reset-data-button" class="text-xs text-gray-400 hover:text-red-500">Reset</button></div>
-                <div class="bg-blue-600 text-white p-5 rounded-xl shadow-lg"><p class="text-sm opacity-80">Saldo Anda</p><p id="home-balance" class="text-3xl font-bold mt-1"></p></div>
-                <div class="grid grid-cols-4 gap-4 text-center">
-                    <button id="pay-button" class="hover:bg-gray-100 p-2 rounded-lg"><div class="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></div><p class="mt-2 text-xs font-semibold">Bayar</p></button>
-                    <button id="transfer-button" class="hover:bg-gray-100 p-2 rounded-lg"><div class="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5l-3-3m0 0l-3 3m3-3v8"/></svg></div><p class="mt-2 text-xs font-semibold">Transfer</p></button>
-                    <button id="receive-button" class="hover:bg-gray-100 p-2 rounded-lg"><div class="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div><p class="mt-2 text-xs font-semibold">Terima</p></button>
-                    <button id="history-button" class="hover:bg-gray-100 p-2 rounded-lg"><div class="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><p class="mt-2 text-xs font-semibold">Riwayat</p></button>
-                </div>
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-white dark:bg-gray-800 shadow-lg flex-shrink-0 transition-all-smooth absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 z-30">
+            <div class="flex items-center justify-center h-20 border-b dark:border-gray-700">
+                <h1 class="text-2xl font-bold text-blue-600 dark:text-blue-400">Aura<span class="text-yellow-500">Bank</span></h1>
             </div>
-
-            <!-- Scanner View -->
-            <div id="scanner-view" class="view"><h1 class="text-2xl font-bold text-center">Pindai QRIS</h1><div id="qr-reader" class="w-full mt-4 rounded-lg overflow-hidden border"></div><button class="back-button w-full mt-4 bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button></div>
-            
-            <!-- Transfer View -->
-            <div id="transfer-view" class="view space-y-4">
-                <h2 class="text-xl font-semibold text-center">Transfer Bank</h2>
-                <div>
-                    <label class="text-sm font-medium">Bank Tujuan</label>
-                    <select id="bank-select" class="w-full mt-1 px-3 py-2 border rounded-md bg-white"></select>
-                </div>
-                <div>
-                    <label class="text-sm font-medium">Nomor Rekening</label>
-                    <input type="number" id="account-number" class="w-full mt-1 px-3 py-2 border rounded-md" placeholder="Masukkan nomor rekening">
-                    <p class="text-xs text-gray-400 mt-1">Untuk tes, coba: <strong>1234567890</strong> (BCA) atau <strong>1112223334</strong> (Mandiri).</p>
-                </div>
-                <div>
-                    <label class="text-sm font-medium">Nominal (Rp)</label>
-                    <input type="number" id="transfer-amount" class="w-full mt-1 px-3 py-2 border rounded-md">
-                </div>
-                <button id="check-account-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Lanjutkan</button>
-                <button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button>
+            <nav class="mt-5 px-4">
+                <a href="#" class="nav-link active flex items-center p-3 my-1 rounded-lg text-white bg-blue-600 dark:bg-blue-500">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> Dashboard
+                </a>
+                <a href="#" class="nav-link flex items-center p-3 my-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="arrow-right-left" class="w-5 h-5 mr-3"></i> Transfer
+                </a>
+                <a href="#" class="nav-link flex items-center p-3 my-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="credit-card" class="w-5 h-5 mr-3"></i> Kartu
+                </a>
+                <a href="#" class="nav-link flex items-center p-3 my-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="settings" class="w-5 h-5 mr-3"></i> Pengaturan
+                </a>
+            </nav>
+            <div class="absolute bottom-0 w-full p-4 border-t dark:border-gray-700">
+                 <a href="#" class="flex items-center p-3 my-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="log-out" class="w-5 h-5 mr-3"></i> Keluar
+                </a>
             </div>
+        </aside>
 
-            <!-- Receive Money View -->
-            <div id="receive-view" class="view space-y-4"><h2 class="text-xl font-semibold text-center">Terima Uang</h2><div><label class="text-sm font-medium">Nominal (Opsional)</label><input type="number" id="receive-amount" class="w-full mt-1 px-3 py-2 border rounded-md" placeholder="Kosongkan untuk jumlah bebas"></div><button id="generate-qr-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Buat Kode QR</button><button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button></div>
-            
-            <!-- Show QR View -->
-            <div id="show-qr-view" class="view text-center"><h2 class="text-xl font-semibold">Pindai untuk Membayar</h2><div id="qrcode" class="flex justify-center my-4"></div><p class="font-semibold" id="qr-receiver-name"></p><p class="text-2xl font-bold" id="qr-receive-amount"></p><button id="simulate-receive-button" class="w-full mt-4 bg-green-500 text-white font-bold py-3 rounded-lg">Simulasikan Penerimaan Dana</button><button class="back-button w-full mt-2 bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Selesai</button></div>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="flex justify-between items-center p-4 sm:p-6 bg-white dark:bg-gray-800 border-b dark:border-gray-200 dark:border-gray-700">
+                <div class="flex items-center">
+                    <button id="menu-button" class="md:hidden mr-4 text-gray-600 dark:text-gray-300">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    <h2 class="text-2xl font-semibold">Dashboard</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        <i id="theme-icon-sun" data-lucide="sun" class="w-5 h-5 hidden"></i>
+                        <i id="theme-icon-moon" data-lucide="moon" class="w-5 h-5"></i>
+                    </button>
+                    <img src="https://placehold.co/40x40/E2E8F0/4A5568?text=JD" alt="User Avatar" class="w-10 h-10 rounded-full">
+                </div>
+            </header>
 
-            <!-- Payment/Transfer Confirmation View -->
-            <div id="confirmation-view" class="view space-y-4"><h2 class="text-xl font-semibold text-center">Konfirmasi Transaksi</h2><div id="confirmation-details" class="bg-gray-50 rounded-lg p-4"></div><button id="confirm-pay-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Konfirmasi</button><button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Batal</button></div>
-
-            <!-- PIN View -->
-            <div id="pin-view" class="view"><h2 class="text-xl font-semibold text-center">Masukkan PIN</h2><div class="flex justify-center gap-4 my-6" id="pin-dots"></div><div class="grid grid-cols-3 gap-4 text-2xl" id="keypad"></div><button class="back-button w-full mt-4 bg-gray-200 font-bold py-3 rounded-lg" data-target="confirmation-view">Kembali</button></div>
-
-            <!-- Success View -->
-            <div id="success-view" class="view text-center py-4"><div class="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center"><svg class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg></div><h2 class="text-2xl font-bold mt-4">Transaksi Berhasil</h2><div id="receipt" class="mt-4 text-left bg-white rounded-lg p-4 border"></div><div class="flex gap-4 mt-6"><button id="download-receipt" class="w-full bg-gray-700 text-white font-bold py-3 rounded-lg">Download</button><button class="back-button w-full bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Selesai</button></div></div>
-
-            <!-- History View -->
-            <div id="history-view" class="view"><h2 class="text-xl font-semibold text-center mb-4">Riwayat Transaksi</h2><div id="history-list" class="space-y-3 max-h-96 overflow-y-auto"></div><button class="back-button w-full mt-4 bg-gray-200 font-bold py-3 rounded-lg" data-target="home-view">Kembali</button></div>
-            
-            <!-- Loading View -->
-            <div id="loading-view" class="view flex-col items-center justify-center space-y-4 py-8"><div class="loader"></div><p id="loading-text" class="text-gray-600">Memproses...</p></div>
-            
-            <div id="error-message" class="hidden text-center p-3 my-2 bg-red-100 text-red-700 rounded-lg"></div>
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left Column -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Balance & Actions Card -->
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Total Saldo</p>
+                            <p id="balance-display" class="text-4xl font-bold mt-2"></p>
+                            <div class="mt-6 flex space-x-2 sm:space-x-4">
+                                <button data-modal-target="transfer-modal" class="flex-1 flex items-center justify-center p-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all-smooth shadow">
+                                    <i data-lucide="send" class="w-5 h-5 mr-2"></i> Transfer
+                                </button>
+                                <button data-modal-target="pay-modal" class="flex-1 flex items-center justify-center p-3 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all-smooth">
+                                    <i data-lucide="receipt" class="w-5 h-5 mr-2"></i> Bayar
+                                </button>
+                                <button data-modal-target="topup-modal" class="flex-1 flex items-center justify-center p-3 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all-smooth">
+                                    <i data-lucide="smartphone" class="w-5 h-5 mr-2"></i> Top Up
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Recent Transactions -->
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Transaksi Terakhir</h3>
+                                <div id="filter-buttons" class="flex space-x-2">
+                                    <button data-filter="all" class="px-3 py-1 text-sm rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">Semua</button>
+                                    <button data-filter="income" class="px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">Pemasukan</button>
+                                    <button data-filter="expense" class="px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">Pengeluaran</button>
+                                </div>
+                            </div>
+                            <div id="transaction-list" class="space-y-4"></div>
+                        </div>
+                    </div>
+                    <!-- Right Column -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                            <h3 class="text-lg font-semibold mb-4">Kartu Saya</h3>
+                            <div class="p-5 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 text-white shadow-lg">
+                                <p class="text-sm opacity-70">AuraBank Gold</p>
+                                <p class="font-mono text-xl tracking-wider my-4">**** **** **** 8876</p>
+                                <div class="flex justify-between items-end">
+                                    <div>
+                                        <p class="text-xs opacity-70">Card Holder</p>
+                                        <p class="font-medium">John Doe</p>
+                                    </div>
+                                    <p class="font-bold text-lg">VISA</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
-    <div id="toast" class="bg-gray-800 text-white text-sm py-2 px-4 rounded-full shadow-lg"></div>
+    <!-- Modals -->
+    <div id="transfer-modal" class="modal-overlay">
+        <div class="modal-content w-full max-w-md p-6 rounded-xl bg-white dark:bg-gray-800 shadow-xl">
+            <h2 class="text-xl font-semibold mb-4">Transfer Dana</h2>
+            <form id="transfer-form" class="space-y-4">
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="recipient-account" name="recipientAccount" placeholder="No. Rekening Tujuan" class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border border-transparent focus:border-blue-500 focus:ring-0 outline-none" required>
+                    <button type="button" id="check-recipient-btn" class="px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 font-semibold text-sm">Cek</button>
+                </div>
+                <div id="recipient-info-container" class="hidden">
+                    <div id="recipient-info" class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Nama Penerima</p>
+                        <p id="recipient-name" class="font-semibold text-blue-800 dark:text-blue-200"></p>
+                    </div>
+                </div>
+                <input type="number" id="transfer-amount" name="amount" placeholder="Jumlah (Rp)" class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border border-transparent focus:border-blue-500 focus:ring-0 outline-none disabled:bg-gray-200 dark:disabled:bg-gray-700/50 disabled:cursor-not-allowed" disabled required>
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" class="modal-close px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">Batal</button>
+                    <button type="submit" id="send-btn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:bg-blue-400 dark:disabled:bg-blue-800 disabled:cursor-not-allowed" disabled>Kirim</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Other Modals ... -->
+    <div id="pay-modal" class="modal-overlay">...</div>
+    <div id="topup-modal" class="modal-overlay">...</div>
+
+    <!-- Notification -->
+    <div id="notification" class="px-6 py-3 rounded-lg shadow-lg text-white font-semibold">
+        <span id="notification-message"></span>
+    </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        let appState = {}; let transactionData = {}; let html5QrcodeScanner; let currentPin = '';
-        const views = Object.fromEntries([...document.querySelectorAll('.view')].map(el => [el.id.replace('-view', ''), el]));
-        const formatCurrency = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
-        const banks = ["BCA", "Mandiri", "BNI", "BRI", "CIMB Niaga", "Danamon"];
-        
-        const bankAccountDatabase = {
-            "BCA": { "1234567890": "Budi Santoso", "0987654321": "Siti Aminah" },
-            "Mandiri": { "1112223334": "Citra Lestari", "4445556667": "Rizky Pratama" },
-            "BNI": { "9876543210": "Agus Wijaya", "0123456789": "Fitri Handayani" },
-            "BRI": { "5555666677": "Eko Prasetyo" }
-        };
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
 
-        function saveState() { localStorage.setItem('walletAppState', JSON.stringify(appState)); }
-        function loadState() {
-            const saved = localStorage.getItem('walletAppState');
-            appState = saved ? JSON.parse(saved) : { balance: 5000000, transactions: [], senderName: 'Maechell' };
-        }
-        
-        function showView(viewName, data) {
-            Object.values(views).forEach(v => v.classList.remove('active'));
-            views[viewName].classList.add('active');
-            document.getElementById('error-message').classList.add('hidden');
-            if (viewName === 'scanner') startScanner(); else stopScanner();
-            if (data) transactionData = { ...transactionData, ...data };
-        }
+            // --- Mock Database ---
+            const mockAccounts = {
+                "1234567890": "Budi Santoso",
+                "0987654321": "Citra Lestari",
+                "1122334455": "Andi Wijaya"
+            };
 
-        function updateHomeScreen() {
-            document.getElementById('home-sender-name').textContent = appState.senderName;
-            document.getElementById('home-balance').textContent = formatCurrency(appState.balance);
-        }
-        
-        function renderHistory() {
-            const list = document.getElementById('history-list');
-            list.innerHTML = appState.transactions.length === 0 ? '<p class="text-center text-gray-500">Belum ada transaksi.</p>' : '';
-            appState.transactions.slice().reverse().forEach(tx => {
-                const isIncoming = tx.type === 'Dana Masuk';
-                const item = document.createElement('div');
-                item.className = 'p-3 border rounded-lg flex justify-between items-center';
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isIncoming ? 'bg-green-100' : 'bg-red-100'}">
-                            <svg class="w-6 h-6 ${isIncoming ? 'text-green-600' : 'text-red-600'}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isIncoming ? 'M12 4v16m8-8H4' : 'M12 4v16m-8-8h16'}"/></svg>
-                        </div>
-                        <div>
-                            <p class="font-semibold">${isIncoming ? tx.sender.name : tx.merchant.name}</p>
-                            <p class="text-xs text-gray-500">${tx.timestamp}</p>
-                        </div>
-                    </div>
-                    <p class="font-bold ${isIncoming ? 'text-green-600' : 'text-red-600'}">${isIncoming ? '+' : '-'}${formatCurrency(tx.payment.total)}</p>
-                `;
-                list.appendChild(item);
-            });
-        }
-        
-        function startScanner() {
-            const qrReaderEl = document.getElementById('qr-reader');
-            if (!qrReaderEl.hasChildNodes()) {
-                html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true }, false);
-                html5QrcodeScanner.render(onScanSuccess, () => {});
-            }
-        }
-        function stopScanner() {
-            if (html5QrcodeScanner && html5QrcodeScanner.getState() === 2) {
-                html5QrcodeScanner.clear().catch(err => {});
-            }
-        }
+            // --- State Management ---
+            let state = {
+                balance: 125750000,
+                transactions: [
+                    { id: 1, type: 'Gaji', category: 'income', amount: 15200000, date: '2025-08-25' },
+                    { id: 2, type: 'Supermarket', category: 'expense', amount: 350000, date: '2025-08-28' },
+                    { id: 3, type: 'Restoran', category: 'expense', amount: 275000, date: '2025-08-18' },
+                    { id: 4, type: 'PLN', category: 'expense', amount: 550000, date: '2025-08-20' },
+                ],
+                currentFilter: 'all',
+                verifiedRecipient: null
+            };
 
-        function onScanSuccess(decodedText) {
-            stopScanner(); showView('loading');
-            document.getElementById('loading-text').textContent = "Memproses QRIS...";
-            setTimeout(() => {
-                try {
-                    const data = parseTLV(decodedText);
-                    const merchantInfo = data['26'] || data['27'] || data['28'] || data['29'] || data['30'] || data['31'] || data['32'] || data['33'] || data['34'] || data['35'] || data['36'] || data['37'] || data['38'] || data['39'] || data['40'] || data['41'] || data['42'] || data['43'] || data['44'] || data['45'] || data['46'] || data['47'] || data['48'] || data['49'] || data['50'] || data['51'];
-                    if (!data['59'] || !merchantInfo || !merchantInfo['02']) throw new Error("Format QRIS tidak valid.");
-                    showView('payment', { type: 'QRIS', merchant: { name: data['59'], city: data['60'] || 'N/A', nmid: merchantInfo['02'] } });
-                    document.getElementById('merchant-details').innerHTML = `<div class="flex justify-between p-2"><span class="text-gray-500">Penerima</span><span class="font-semibold">${transactionData.merchant.name}</span></div>`;
-                } catch (e) { showError(e.message); resetToHome(); }
-            }, 500);
-        }
-        
-        function resetToHome() {
-            stopScanner(); transactionData = {}; currentPin = '';
-            ['amount', 'purpose', 'transfer-amount', 'account-number', 'receive-amount'].forEach(id => document.getElementById(id).value = '');
-            updateHomeScreen(); showView('home');
-        }
+            // --- UI Elements ---
+            const balanceDisplay = document.getElementById('balance-display');
+            const transactionList = document.getElementById('transaction-list');
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notification-message');
+            const filterButtons = document.getElementById('filter-buttons');
+            // Transfer Modal Elements
+            const transferModal = document.getElementById('transfer-modal');
+            const checkRecipientBtn = document.getElementById('check-recipient-btn');
+            const recipientAccountInput = document.getElementById('recipient-account');
+            const recipientInfoContainer = document.getElementById('recipient-info-container');
+            const recipientNameDisplay = document.getElementById('recipient-name');
+            const transferAmountInput = document.getElementById('transfer-amount');
+            const sendBtn = document.getElementById('send-btn');
 
-        function showConfirmation() {
-            const detailsEl = document.getElementById('confirmation-details');
-            const { type, payment, merchant } = transactionData;
-            const total = payment.amount + payment.adminFee;
-            if (total > appState.balance) { showError(`Saldo tidak mencukupi.`); return; }
-            payment.total = total;
-            detailsEl.innerHTML = `
-                <div class="flex justify-between p-1"><span class="text-gray-500">Penerima</span><span class="font-semibold">${merchant.name}</span></div>
-                ${type === 'Transfer' ? `<div class="flex justify-between p-1"><span class="text-gray-500">Bank Tujuan</span><span class="font-semibold">${merchant.bank} - ${merchant.account}</span></div>` : ''}
-                <hr class="my-2"><div class="flex justify-between p-1"><span>Nominal</span><span>${formatCurrency(payment.amount)}</span></div>
-                <div class="flex justify-between p-1"><span>Biaya Admin</span><span>${formatCurrency(payment.adminFee)}</span></div>
-                <div class="flex justify-between p-2 mt-2 border-t-2"><span class="font-bold">Total</span><span class="font-bold text-xl text-blue-600">${formatCurrency(payment.total)}</span></div>
-            `;
-            showView('confirmation');
-        }
 
-        function finalizeTransaction() {
-            showView('loading');
-            document.getElementById('loading-text').textContent = "Memproses Transaksi...";
-            setTimeout(() => {
-                appState.balance -= transactionData.payment.total;
-                transactionData.refId = `TRX${Date.now()}`;
-                transactionData.timestamp = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
-                appState.transactions.push(transactionData);
-                saveState();
-                document.getElementById('receipt').innerHTML = `
-                    <h3 class="text-center font-semibold text-lg mb-2">Bukti Transaksi</h3>
-                    <div class="flex justify-between p-1"><span class="text-gray-500">Status</span><span class="font-bold text-green-600">Berhasil</span></div>
-                    <div class="flex justify-between p-1"><span class="text-gray-500">No. Ref</span><span class="font-mono text-xs">${transactionData.refId}</span></div>
-                    <hr class="my-2 border-dashed">
-                    <div class="flex justify-between p-1"><span class="text-gray-500">Penerima</span><span class="font-semibold">${transactionData.merchant.name}</span></div>
-                    ${transactionData.type === 'Transfer' ? `<div class="flex justify-between p-1"><span class="text-gray-500">Bank</span><span>${transactionData.merchant.bank} - ${transactionData.merchant.account}</span></div>` : ''}
-                    <hr class="my-2 border-dashed">
-                    <div class="flex justify-between p-2 mt-2 border-t-2"><span class="font-bold">Total Dibayar</span><span class="font-bold text-xl text-blue-600">${formatCurrency(transactionData.payment.total)}</span></div>
-                `;
-                showView('success');
-                showToast('Transaksi berhasil!');
-            }, 1000);
-        }
+            // --- Formatters ---
+            const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
-        document.getElementById('pay-button').addEventListener('click', () => showView('scanner'));
-        document.getElementById('transfer-button').addEventListener('click', () => showView('transfer'));
-        document.getElementById('receive-button').addEventListener('click', () => showView('receive'));
-        document.getElementById('history-button').addEventListener('click', () => { renderHistory(); showView('history'); });
-        document.querySelectorAll('.back-button').forEach(btn => btn.addEventListener('click', () => resetToHome()));
-        
-        document.getElementById('check-account-button').addEventListener('click', () => {
-            const amount = parseFloat(document.getElementById('transfer-amount').value);
-            const accNum = document.getElementById('account-number').value;
-            const bank = document.getElementById('bank-select').value;
-            if (isNaN(amount) || amount <= 0 || !accNum) { showError("Isi semua data dengan benar."); return; }
-            
-            showView('loading');
-            document.getElementById('loading-text').textContent = "Menghubungi Bank...";
-            setTimeout(() => {
-                const recipientName = bankAccountDatabase[bank]?.[accNum];
-                if (recipientName) {
-                    showView('confirmation', { type: 'Transfer', merchant: { name: recipientName, bank: bank, account: accNum }, payment: { amount, adminFee: 6500 } });
-                } else {
-                    showError("Nomor rekening tidak ditemukan atau tidak terdaftar.");
-                    showView('transfer');
+            // --- Rendering Functions ---
+            const renderBalance = () => {
+                balanceDisplay.textContent = currencyFormatter.format(state.balance);
+            };
+
+            const renderTransactions = () => {
+                // ... (same as before)
+                const filteredTransactions = state.transactions
+                    .filter(tx => state.currentFilter === 'all' || tx.category === state.currentFilter)
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (filteredTransactions.length === 0) {
+                    transactionList.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400">Tidak ada transaksi.</p>`;
+                    return;
                 }
-            }, 1500);
-        });
+                
+                transactionList.innerHTML = filteredTransactions.map(tx => {
+                    const isIncome = tx.category === 'income';
+                    const icon = isIncome ? 'arrow-down-circle' : 'arrow-up-circle';
+                    const color = isIncome ? 'green' : 'red';
+                    return `
+                        <div class="flex items-center p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <div class="p-3 rounded-full bg-${color}-100 dark:bg-${color}-900/50 mr-4">
+                                <i data-lucide="${icon}" class="w-5 h-5 text-${color}-500"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-medium">${tx.type}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">${new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })}</p>
+                            </div>
+                            <p class="font-semibold text-${color}-500">
+                                ${isIncome ? '+' : '-'} ${currencyFormatter.format(tx.amount)}
+                            </p>
+                        </div>
+                    `;
+                }).join('');
+                lucide.createIcons();
+            };
 
-        document.getElementById('confirm-pay-button').addEventListener('click', () => { currentPin = ''; showView('pin'); });
-        document.getElementById('generate-qr-button').addEventListener('click', () => {
-            const amount = parseFloat(document.getElementById('receive-amount').value) || 0;
-            const qrData = JSON.stringify({ name: appState.senderName, amount });
-            document.getElementById('qrcode').innerHTML = '';
-            new QRCode(document.getElementById('qrcode'), { text: qrData, width: 200, height: 200 });
-            document.getElementById('qr-receiver-name').textContent = appState.senderName;
-            document.getElementById('qr-receive-amount').textContent = amount > 0 ? formatCurrency(amount) : 'Jumlah Bebas';
-            showView('showQr');
-        });
-        document.getElementById('simulate-receive-button').addEventListener('click', () => {
-            const amount = parseFloat(document.getElementById('receive-amount').value) || 50000;
-            appState.balance += amount;
-            appState.transactions.push({ type: 'Dana Masuk', sender: { name: 'Pengirim Simulasi' }, merchant: { name: appState.senderName }, payment: { total: amount, amount, adminFee: 0 }, timestamp: new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) });
-            saveState();
-            showToast(`Dana sebesar ${formatCurrency(amount)} berhasil diterima!`);
-            resetToHome();
-        });
-        document.getElementById('download-receipt').addEventListener('click', () => html2canvas(document.getElementById('receipt'), { scale: 2 }).then(c => { const l = document.createElement('a'); l.download = `bukti-${transactionData.refId}.png`; l.href = c.toDataURL(); l.click(); }));
-        document.getElementById('reset-data-button').addEventListener('click', () => { if (confirm('Yakin ingin reset data?')) { localStorage.removeItem('walletAppState'); loadState(); updateHomeScreen(); showToast('Data direset.'); } });
-        
-        const keypad = document.getElementById('keypad');
-        const pinDots = document.getElementById('pin-dots');
-        keypad.innerHTML = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 002.828 0L21 12M3 12l6.414-6.414a2 2 0 012.828 0L21 12"></path></svg>'].map(k => `<button class="keypad-btn p-4 rounded-lg flex justify-center items-center ${!k && 'invisible'}">${k}</button>`).join('');
-        pinDots.innerHTML = Array(6).fill('<div class="pin-dot"></div>').join('');
-        keypad.addEventListener('click', e => {
-            const key = e.target.closest('button');
-            if (!key) return;
-            if (key.querySelector('svg')) { currentPin = currentPin.slice(0, -1); } 
-            else if (currentPin.length < 6 && key.textContent) { currentPin += key.textContent; }
+            // --- Notification Handler ---
+            const showNotification = (message, type = 'success') => {
+                notificationMessage.textContent = message;
+                notification.className = `px-6 py-3 rounded-lg shadow-lg text-white font-semibold ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} show`;
+                setTimeout(() => notification.classList.remove('show'), 3000);
+            };
             
-            [...pinDots.children].forEach((d, i) => d.classList.toggle('filled', i < currentPin.length));
-            if (currentPin.length === 6) finalizeTransaction();
-        });
+            // --- Transfer Modal Logic ---
+            const resetTransferForm = () => {
+                document.getElementById('transfer-form').reset();
+                state.verifiedRecipient = null;
+                recipientInfoContainer.classList.add('hidden');
+                transferAmountInput.disabled = true;
+                sendBtn.disabled = true;
+                recipientAccountInput.disabled = false;
+                checkRecipientBtn.disabled = false;
+                checkRecipientBtn.innerHTML = 'Cek';
+            };
 
-        function parseTLV(tlvString) {
-            const result = {}; let position = 0;
-            while (position < tlvString.length) {
-                if (position + 4 > tlvString.length) break;
-                const tag = tlvString.substring(position, position + 2); position += 2;
-                const length = parseInt(tlvString.substring(position, position + 2), 10); position += 2;
-                if (isNaN(length) || position + length > tlvString.length) break;
-                const value = tlvString.substring(position, position + length); position += length;
-                if (['26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '62', '64'].includes(tag)) {
-                    result[tag] = parseTLV(value);
-                } else { result[tag] = value; }
+            checkRecipientBtn.addEventListener('click', () => {
+                const accountNumber = recipientAccountInput.value;
+                if (!accountNumber) {
+                    showNotification('Masukkan nomor rekening.', 'error');
+                    return;
+                }
+                
+                checkRecipientBtn.disabled = true;
+                checkRecipientBtn.innerHTML = '<span class="loader"></span>';
+
+                // Simulate API call
+                setTimeout(() => {
+                    const recipientName = mockAccounts[accountNumber];
+                    if (recipientName) {
+                        state.verifiedRecipient = { name: recipientName, account: accountNumber };
+                        recipientNameDisplay.textContent = recipientName;
+                        recipientInfoContainer.classList.remove('hidden');
+                        transferAmountInput.disabled = false;
+                        sendBtn.disabled = false;
+                        recipientAccountInput.disabled = true;
+                        showNotification('Penerima ditemukan.', 'success');
+                    } else {
+                        showNotification('Nomor rekening tidak ditemukan.', 'error');
+                        state.verifiedRecipient = null;
+                    }
+                    checkRecipientBtn.disabled = false;
+                    checkRecipientBtn.innerHTML = 'Cek';
+                }, 1000); // 1 second delay
+            });
+
+            // --- Modal Logic ---
+            document.querySelectorAll('[data-modal-target]').forEach(trigger => {
+                trigger.addEventListener('click', () => {
+                    const modalId = trigger.dataset.modalTarget;
+                    const modal = document.getElementById(modalId);
+                    if (modal) {
+                        modal.classList.add('visible');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.addEventListener('click', e => {
+                    if (e.target === modal || e.target.closest('.modal-close')) {
+                        modal.classList.remove('visible');
+                        if (modal.id === 'transfer-modal') {
+                            resetTransferForm();
+                        }
+                    }
+                });
+            });
+
+            // --- Transaction Logic ---
+            document.getElementById('transfer-form').addEventListener('submit', e => {
+                e.preventDefault();
+                if (!state.verifiedRecipient) {
+                    showNotification('Mohon verifikasi penerima terlebih dahulu.', 'error');
+                    return;
+                }
+                
+                const form = e.target;
+                const amount = parseFloat(form.amount.value);
+
+                if (isNaN(amount) || amount <= 0) {
+                    showNotification('Jumlah transfer tidak valid.', 'error');
+                    return;
+                }
+                if (amount > state.balance) {
+                    showNotification('Saldo tidak cukup.', 'error');
+                    return;
+                }
+
+                state.balance -= amount;
+                state.transactions.push({
+                    id: Date.now(),
+                    type: `Transfer ke ${state.verifiedRecipient.name}`,
+                    category: 'expense',
+                    amount: amount,
+                    date: new Date().toISOString().split('T')[0]
+                });
+                
+                renderBalance();
+                renderTransactions();
+                showNotification('Transfer berhasil!', 'success');
+                transferModal.classList.remove('visible');
+                resetTransferForm();
+            });
+
+            // --- Filtering, Theme, Sidebar (same as before) ---
+            filterButtons.addEventListener('click', e => {
+                if (e.target.tagName === 'BUTTON') {
+                    state.currentFilter = e.target.dataset.filter;
+                    filterButtons.querySelectorAll('button').forEach(btn => {
+                        btn.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-700', 'dark:text-blue-300');
+                        btn.classList.add('hover:bg-gray-100', 'dark:hover:bg-gray-700');
+                    });
+                    e.target.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-700', 'dark:text-blue-300');
+                    e.target.classList.remove('hover:bg-gray-100', 'dark:hover:bg-gray-700');
+                    renderTransactions();
+                }
+            });
+
+            const themeToggle = document.getElementById('theme-toggle');
+            const sunIcon = document.getElementById('theme-icon-sun');
+            const moonIcon = document.getElementById('theme-icon-moon');
+            const html = document.documentElement;
+
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                html.classList.add('dark');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                html.classList.remove('dark');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
             }
-            return result;
-        }
 
-        loadState(); updateHomeScreen();
-        const bankSelect = document.getElementById('bank-select');
-        banks.forEach(b => bankSelect.innerHTML += `<option>${b}</option>`);
-    });
+            themeToggle.addEventListener('click', () => {
+                html.classList.toggle('dark');
+                sunIcon.classList.toggle('hidden');
+                moonIcon.classList.toggle('hidden');
+                localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+            });
+
+            document.getElementById('menu-button').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            });
+
+            // --- Initial Render ---
+            renderBalance();
+            renderTransactions();
+        });
     </script>
 </body>
 </html>
