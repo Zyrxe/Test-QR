@@ -28,6 +28,7 @@
         .result-item {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             padding: 0.75rem 0;
             border-bottom: 1px solid #e5e7eb;
         }
@@ -36,11 +37,13 @@
         }
         .result-label {
             color: #6b7280;
+            font-size: 0.875rem;
         }
         .result-value {
             color: #111827;
             font-weight: 500;
             text-align: right;
+            font-size: 0.875rem;
         }
         .loader {
             border: 4px solid #f3f3f3;
@@ -103,15 +106,16 @@
             </button>
         </div>
 
-        <!-- Status Section -->
-        <div id="status-section" class="hidden text-center py-8">
+        <!-- Status Section (Proof of Payment) -->
+        <div id="status-section" class="hidden text-center py-4">
              <div class="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
                 <svg class="h-10 w-10 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
             </div>
             <h2 id="status-title" class="text-2xl font-bold text-gray-900 mt-4">Pembayaran Berhasil!</h2>
-            <p id="status-message" class="text-gray-600 mt-2"></p>
+            <p class="text-gray-500">Berikut adalah bukti pembayaran Anda.</p>
+            <div id="payment-proof" class="mt-4"></div>
             <button id="scan-again-button" class="mt-6 w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors">
                 Scan Lagi
             </button>
@@ -135,6 +139,7 @@
         const scanAgainButton = document.getElementById('scan-again-button');
         const qrisResultContainer = document.getElementById('qris-result-container');
         const amountInput = document.getElementById('amount');
+        const paymentProofContainer = document.getElementById('payment-proof');
 
         let merchantData = {};
         
@@ -147,16 +152,15 @@
             const result = {};
             let position = 0;
             while (position < tlvString.length) {
-                if (position + 4 > tlvString.length) break; // Prevent reading past the end
+                if (position + 4 > tlvString.length) break;
                 const tag = tlvString.substring(position, position + 2);
                 position += 2;
                 const length = parseInt(tlvString.substring(position, position + 2), 10);
                 position += 2;
-                 if (isNaN(length) || position + length > tlvString.length) break; // Prevent reading past the end
+                 if (isNaN(length) || position + length > tlvString.length) break;
                 const value = tlvString.substring(position, position + length);
                 position += length;
 
-                // If the tag is a template (contains nested TLV), parse it recursively
                 if (['26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '62', '64'].includes(tag)) {
                     result[tag] = parseTLV(value);
                 } else {
@@ -171,23 +175,19 @@
          * @param {string} decodedText The raw string from the QRIS code.
          */
         function onScanSuccess(decodedText) {
-            // Stop the scanner
             html5QrcodeScanner.clear().catch(error => {
                 console.error("Failed to clear html5QrcodeScanner.", error);
             });
 
-            // Show loading and hide scanner
             scannerSection.classList.add('hidden');
             loadingSection.classList.remove('hidden');
             errorMessage.classList.add('hidden');
 
-            setTimeout(() => { // Simulate processing delay
+            setTimeout(() => {
                 try {
                     const parsedData = parseTLV(decodedText);
                     console.log("Parsed QRIS Data:", parsedData);
 
-                    // Extract key information
-                    // Merchant info is typically in one of the tags from 26 to 51
                     let merchantInfo = null;
                     for (let i = 26; i <= 51; i++) {
                         const tag = i.toString();
@@ -205,13 +205,11 @@
                         merchantName: parsedData['59'] || 'Tidak Tersedia',
                         nmid: merchantInfo['02'] || 'Tidak Tersedia',
                         merchantCity: parsedData['60'] || 'Tidak Tersedia',
-                        acquirer: merchantInfo['00'] || 'Tidak Tersedia', // GUID
+                        acquirer: merchantInfo['00'] || 'Tidak Tersedia',
                     };
 
-                    // Display results
                     displayResults(merchantData);
 
-                    // Update UI state
                     loadingSection.classList.add('hidden');
                     resultSection.classList.remove('hidden');
                     paymentSection.classList.remove('hidden');
@@ -249,27 +247,15 @@
             `;
         }
         
-        /**
-         * Handles scanner errors.
-         * @param {string} error The error message.
-         */
         function onScanFailure(error) {
-            // This function is called frequently, so we can ignore most errors.
             // console.warn(`Code scan error = ${error}`);
         }
         
-        /**
-         * Displays an error message in the UI.
-         * @param {string} message The message to display.
-         */
         function showError(message) {
             errorMessage.textContent = message;
             errorMessage.classList.remove('hidden');
         }
 
-        /**
-         * Resets the UI to its initial state.
-         */
         function resetUI() {
             scannerSection.classList.remove('hidden');
             loadingSection.classList.add('hidden');
@@ -279,7 +265,6 @@
             errorMessage.classList.add('hidden');
             amountInput.value = '';
             merchantData = {};
-            // Re-render the scanner if it was cleared
             if (!document.getElementById('qr-reader__dashboard_section_csr')) {
                  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
             }
@@ -294,18 +279,55 @@
                 return;
             }
 
-            errorMessage.classList.add('hidden'); // Hide error if validation passes
+            errorMessage.classList.add('hidden');
 
+            // --- Sender Details ---
+            const senderName = "Maechell";
+            const senderPhone = "+62 812-3456-7890";
+
+            // --- Transaction Details ---
+            const transactionId = `TRX${Date.now()}`;
+            const timestamp = new Date().toLocaleString('id-ID', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) + ' WIB';
             const formattedAmount = new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
                 minimumFractionDigits: 0
             }).format(amount);
 
-            document.getElementById('status-title').textContent = 'Pembayaran Berhasil!';
-            document.getElementById('status-message').innerHTML = `
-                Anda telah berhasil melakukan pembayaran sebesar <br>
-                <strong class="text-lg">${formattedAmount}</strong> ke <strong class="text-lg">${merchantData.merchantName}</strong>.
+            // --- Generate Payment Proof HTML ---
+            paymentProofContainer.innerHTML = `
+                <div class="text-left bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="result-item">
+                        <span class="result-label">ID Transaksi</span>
+                        <span class="result-value font-mono">${transactionId}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Waktu Pembayaran</span>
+                        <span class="result-value">${timestamp}</span>
+                    </div>
+                     <div class="result-item">
+                        <span class="result-label">Pengirim</span>
+                        <span class="result-value">${senderName}</span>
+                    </div>
+                     <div class="result-item">
+                        <span class="result-label">No. Telepon</span>
+                        <span class="result-value">${senderPhone}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Penerima</span>
+                        <span class="result-value">${merchantData.merchantName}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Jumlah Pembayaran</span>
+                        <span class="result-value text-lg font-bold text-blue-600">${formattedAmount}</span>
+                    </div>
+                </div>
             `;
 
             resultSection.classList.add('hidden');
@@ -316,26 +338,19 @@
         scanAgainButton.addEventListener('click', resetUI);
 
         fileInput.addEventListener('change', e => {
-            if (e.target.files.length === 0) {
-                return;
-            }
+            if (e.target.files.length === 0) { return; }
             const imageFile = e.target.files[0];
             
-            // Stop the camera scanner before processing a file to avoid conflicts.
             if (html5QrcodeScanner && html5QrcodeScanner.getState() === Html5QrcodeScannerState.SCANNING) {
                 html5QrcodeScanner.clear().catch(err => console.error("Error clearing scanner:", err));
             }
 
-            // Use the base Html5Qrcode class for file scanning.
-            const html5QrCode = new Html5Qrcode("qr-reader", /* verbose= */ false);
-            html5QrCode.scanFile(imageFile, /* showImage= */ false)
-                .then(decodedText => {
-                    onScanSuccess(decodedText);
-                })
+            const html5QrCode = new Html5Qrcode("qr-reader", false);
+            html5QrCode.scanFile(imageFile, false)
+                .then(decodedText => { onScanSuccess(decodedText); })
                 .catch(err => {
                     showError('Gagal memindai QR code dari gambar. Coba gambar lain.');
                     console.error(`Error scanning file. Reason: ${err}`);
-                    // If file scan fails, reset to show the camera scanner again.
                     resetUI();
                 });
         });
@@ -344,17 +359,13 @@
         const html5QrcodeScanner = new Html5QrcodeScanner(
             "qr-reader", {
                 fps: 10,
-                qrbox: {
-                    width: 250,
-                    height: 250
-                },
+                qrbox: { width: 250, height: 250 },
                 rememberLastUsedCamera: true,
                 supportedScanTypes: [
                     Html5QrcodeScanType.SCAN_TYPE_CAMERA,
                     Html5QrcodeScanType.SCAN_TYPE_FILE
                 ]
             },
-            /* verbose= */
             false);
 
         html5QrcodeScanner.render(onScanSuccess, onScanFailure);
